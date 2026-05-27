@@ -12,7 +12,6 @@ body {
     line-height: 1.5;
 }
 
-/* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
 
 .container {
@@ -69,7 +68,7 @@ nav a:hover {
 nav a.active {
     background: #1e6f9f;
     color: white;
-    box-shadow: 0 2px 6px rgba(30, 111, 159, 0.2);
+    box-shadow: 0 2px 6px rgba(30,111,159,0.2);
 }
 
 /* ========== DASHBOARD STATS ========== */
@@ -86,12 +85,12 @@ nav a.active {
     padding: 1.4rem 1.2rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
     transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0,0,0,0.03);
 }
 
 .stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 20px -12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 12px 20px -12px rgba(0,0,0,0.1);
 }
 
 .stat-card h3 {
@@ -118,43 +117,68 @@ nav a.active {
     line-height: 1.2;
 }
 
-/* ========== QUICK ACTIONS ========== */
+/* ========== QUICK ACTIONS - FIXED LAYOUT ========== */
 .quick-actions {
     display: flex;
     gap: 1rem;
     margin-bottom: 2rem;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.4rem;
     background: white;
     border: 1px solid #dce5ec;
-    padding: 0.7rem 1.5rem;
     border-radius: 2rem;
     font-weight: 500;
     text-decoration: none;
     color: #2c5f8a;
     transition: all 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.6rem;
     font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 160px;
 }
 
 .action-btn.primary {
     background: #1e6f9f;
     border-color: #1e6f9f;
     color: white;
-    box-shadow: 0 2px 6px rgba(30, 111, 159, 0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .action-btn:hover {
     background: #e6f0f9;
     border-color: #bdd4e6;
+    transform: translateY(-1px);
 }
 
 .action-btn.primary:hover {
     background: #155d87;
+    transform: translateY(-1px);
+}
+
+/* ========== VERIFY PATIENT CARD ========== */
+.card .form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.card .form-row input {
+    flex: 2;
+    min-width: 200px;
+}
+
+.card .form-row .btn {
+    flex: 0 0 auto;
+    padding: 0.6rem 1.2rem;
+    white-space: nowrap;
 }
 
 /* ========== CARDS & FORMS ========== */
@@ -203,7 +227,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: #1e6f9f;
-    box-shadow: 0 0 0 3px rgba(30, 111, 159, 0.1);
+    box-shadow: 0 0 0 3px rgba(30,111,159,0.1);
 }
 
 .form-row {
@@ -230,7 +254,7 @@ input:focus, select:focus, textarea:focus {
 .btn.primary {
     background: #1e6f9f;
     color: white;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .btn.primary:hover {
@@ -275,6 +299,33 @@ input:focus, select:focus, textarea:focus {
 
 .table tr:last-child td {
     border-bottom: none;
+}
+
+/* Table action buttons */
+.table td .btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    background: #eef2f8;
+    color: #2c5f8a;
+    border: none;
+    border-radius: 1.5rem;
+    cursor: pointer;
+}
+
+.table td .btn.primary {
+    background: #1e6f9f;
+    color: white;
+}
+
+.table td .btn.delete-btn {
+    background: #fee2e2;
+    color: #c23d2e;
+}
+
+.table td .btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
 }
 
 /* Status badges */
@@ -327,7 +378,7 @@ input:focus, select:focus, textarea:focus {
     width: 90%;
     max-width: 550px;
     border-radius: 1.5rem;
-    box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 25px 40px -12px rgba(0,0,0,0.25);
     padding: 1.8rem;
     position: relative;
 }
@@ -407,23 +458,37 @@ input:focus, select:focus, textarea:focus {
     .container {
         padding: 1rem;
     }
-
     header {
         flex-direction: column;
         align-items: stretch;
         text-align: center;
     }
-
     nav {
         justify-content: center;
     }
-
+    .quick-actions {
+        justify-content: center;
+    }
+    .action-btn {
+        min-width: auto;
+        padding: 0.5rem 1.2rem;
+    }
+    .card .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .card .form-row .btn {
+        white-space: normal;
+    }
     .form-row {
         grid-template-columns: 1fr;
     }
-
     .table {
         display: block;
         overflow-x: auto;
+    }
+    .table td .btn {
+        display: inline-block;
+        margin-bottom: 0.3rem;
     }
 }
