@@ -91,11 +91,7 @@ INSERT INTO `doctors` (`doctor_id`, `doctor_name`, `specialization`, `schedule`,
 (2, 'Dr. John Reyes', 'Cardiologist', 'Tuesday – Thursday 1:00 PM – 7:00 PM', 10),
 (3, 'Dr. Angela Cruz', 'Radiologist', 'Friday – Saturday 9:00 AM – 5:00 PM', 12);
 
--- Default admin user (password = admin123)
-INSERT INTO `users` (`user_id`, `username`, `password`, `fullname`, `role`) VALUES
-(1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', 'Admin');
-
-ALTER TABLE `users` AUTO_INCREMENT = 2;
+ALTER TABLE `users` AUTO_INCREMENT = 1;
 ALTER TABLE `patients` AUTO_INCREMENT = 1;
 ALTER TABLE `doctors` AUTO_INCREMENT = 4;
 ALTER TABLE `appointments` AUTO_INCREMENT = 1;
