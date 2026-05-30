@@ -7,7 +7,7 @@
                 <th>ID</th>
                 <th>Patient</th>
                 <th>Doctor</th>
-                <th>Date/Time</th>
+                <th>Date/Time</th> 
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
