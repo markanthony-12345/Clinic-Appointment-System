@@ -116,4 +116,21 @@ function doctorAvailable($pdo, $doctor_id, $date) {
     $current = $stmt->fetchColumn();
     return ['available' => $current < $max, 'remaining' => $max - $current, 'max_patients' => $max, 'current_count' => $current];
 }
+
+function doctorWorksOnDay($pdo, $doctor_id, $date) {
+    $stmt = $pdo->prepare("SELECT schedule FROM doctors WHERE doctor_id = ?");
+    $stmt->execute([$doctor_id]);
+    $schedule = $stmt->fetchColumn();
+    if (!$schedule) return true;
+    
+    $dayOfWeek = date('l', strtotime($date));
+    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    $workingDays = [];
+    foreach ($days as $day) {
+        if (stripos($schedule, $day) !== false) {
+            $workingDays[] = $day;
+        }
+    }
+    return in_array($dayOfWeek, $workingDays);
+}
 ?>
