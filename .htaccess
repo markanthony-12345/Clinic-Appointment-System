@@ -1,54 +1,17 @@
 # ============================================================
-# WHITE HAT SECURITY - .htaccess
-# Place this in your Clinic/ root folder
+# CLINIC APPOINTMENT SYSTEM - DEVELOPER HTACCESS
 # ============================================================
 
-# --- Block access to sensitive files ---
-<FilesMatch "\.(sql|log|env|json|md|bak|sh|git)$">
+# 1. Iwasan na makita ng mga members ang listahan ng files sa browser
+Options -Indexes
+
+# 2. I-block lang ang mga database backup para hindi manakaw ang SQL file
+<FilesMatch "\.(sql|log|env|git)$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>
 
-# --- Block access to classes folder directly ---
+# 3. I-allow ang standard rewrite logic ng XAMPP
 <IfModule mod_rewrite.c>
     RewriteEngine On
-
-    # Block direct access to /classes/ folder
-    RewriteRule ^classes/ - [F,L]
-
-    # Force HTTPS (uncomment if you have SSL)
-    # RewriteCond %{HTTPS} off
-    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-</IfModule>
-
-# --- Prevent directory listing ---
-Options -Indexes
-
-# --- Disable server signature ---
-ServerSignature Off
-
-# --- Set secure headers ---
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "SAMEORIGIN"
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header unset X-Powered-By
-    Header unset Server
-</IfModule>
-
-# --- Block common attack patterns in URL ---
-<IfModule mod_rewrite.c>
-    RewriteCond %{QUERY_STRING} (union|select|insert|drop|delete|update|cast|create|char|convert|alter|exec|declare) [NC,OR]
-    RewriteCond %{QUERY_STRING} (<script|javascript:|vbscript:) [NC,OR]
-    RewriteCond %{QUERY_STRING} (\.\./|\.\.\\) [NC]
-    RewriteRule .* - [F,L]
-</IfModule>
-
-# --- PHP settings (if allowed by server) ---
-<IfModule mod_php.c>
-    php_flag display_errors Off
-    php_flag log_errors On
-    php_value session.cookie_httponly 1
-    php_value session.use_strict_mode 1
 </IfModule>
