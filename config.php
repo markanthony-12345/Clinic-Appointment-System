@@ -44,6 +44,51 @@ try {
         die("❌ DB connection failed: " . $msg);
 }
 
+// ========== NEW: Doctor day‑of‑week validation ==========
+function doctorWorksOnDay($pdo, $doctor_id, $date) {
+    $stmt = $pdo->prepare("SELECT schedule FROM doctors WHERE doctor_id = ?");
+    $stmt->execute([$doctor_id]);
+    $schedule = $stmt->fetchColumn();
+    if (!$schedule) return true; // If no schedule is stored, assume any day is allowed
+
+    $dayOfWeek = date('l', strtotime($date));
+    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    $workingDays = [];
+    foreach ($days as $day) {
+        if (stripos($schedule, $day) !== false) {
+            $workingDays[] = $day;
+        }
+    }
+    return in_array($dayOfWeek, $workingDays);
+}
+
+// ========== Modified doctorAvailable with day check ==========
+function doctorAvailable($pdo, $doctor_id, $date) {
+    // First, check if the doctor works on this day
+    if (!doctorWorksOnDay($pdo, $doctor_id, $date)) {
+        return [
+            'available' => false,
+            'remaining' => 0,
+            'max_patients' => 0,
+            'current_count' => 0,
+            'reason' => 'Doctor does not work on ' . date('l', strtotime($date))
+        ];
+    }
+    // Then check daily patient limit
+    $stmt = $pdo->prepare("SELECT max_patients FROM doctors WHERE doctor_id = ?");
+    $stmt->execute([$doctor_id]);
+    $max = $stmt->fetchColumn();
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND DATE(appointment_date) = ? AND status != 'Cancelled'");
+    $stmt->execute([$doctor_id, $date]);
+    $current = $stmt->fetchColumn();
+    return [
+        'available' => $current < $max,
+        'remaining' => $max - $current,
+        'max_patients' => $max,
+        'current_count' => $current
+    ];
+}
+
 // Auth guards
 function requireLogin() {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -106,31 +151,5 @@ function getPatientName($pdo, $id) {
 }
 function recalcTotal($pdo, $patient_id) {
     $pdo->prepare("UPDATE payments SET total_amount = consultation_fee + laboratory_fee WHERE patient_id = ?")->execute([$patient_id]);
-}
-function doctorAvailable($pdo, $doctor_id, $date) {
-    $stmt = $pdo->prepare("SELECT max_patients FROM doctors WHERE doctor_id = ?");
-    $stmt->execute([$doctor_id]);
-    $max = $stmt->fetchColumn();
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND DATE(appointment_date) = ? AND status != 'Cancelled'");
-    $stmt->execute([$doctor_id, $date]);
-    $current = $stmt->fetchColumn();
-    return ['available' => $current < $max, 'remaining' => $max - $current, 'max_patients' => $max, 'current_count' => $current];
-}
-
-function doctorWorksOnDay($pdo, $doctor_id, $date) {
-    $stmt = $pdo->prepare("SELECT schedule FROM doctors WHERE doctor_id = ?");
-    $stmt->execute([$doctor_id]);
-    $schedule = $stmt->fetchColumn();
-    if (!$schedule) return true;
-    
-    $dayOfWeek = date('l', strtotime($date));
-    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    $workingDays = [];
-    foreach ($days as $day) {
-        if (stripos($schedule, $day) !== false) {
-            $workingDays[] = $day;
-        }
-    }
-    return in_array($dayOfWeek, $workingDays);
 }
 ?>
