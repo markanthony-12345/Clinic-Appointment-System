@@ -6,7 +6,7 @@
             <button class="close" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <form class="appointment-form" id="appointmentForm" action="save_appointment.php" method="POST">
+            <form class="appointment-form" id="appointment_process.php" action="save_appointment.php" method="POST">
                 
                 <!-- Patient ID -->
                 <div class="form-group">
