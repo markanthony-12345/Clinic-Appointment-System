@@ -490,7 +490,7 @@ input:focus, select:focus, textarea:focus {
     cursor: pointer;
 }
 
-/* ========== WEEKLY CALENDAR (New Design) ========== */
+/* ========== WEEKLY CALENDAR (Clickable Date Buttons) ========== */
 .weekly-calendar {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -498,6 +498,7 @@ input:focus, select:focus, textarea:focus {
     margin-top: 0.6rem;
 }
 
+/* Base day card - clickable button style */
 .day-card {
     border: 2px solid #e8eef4;
     border-radius: 1rem;
@@ -508,8 +509,11 @@ input:focus, select:focus, textarea:focus {
     background: white;
     position: relative;
     overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
+/* Top accent bar */
 .day-card::before {
     content: '';
     position: absolute;
@@ -521,32 +525,43 @@ input:focus, select:focus, textarea:focus {
     transition: background 0.2s;
 }
 
-.day-card:hover:not(.full):not(.selected) {
+/* Hover state for available days */
+.day-card:not(.full):not(.selected):hover {
     border-color: #1e6f9f;
     transform: translateY(-3px);
     box-shadow: 0 8px 20px -8px rgba(30,111,159,0.25);
 }
 
-.day-card:hover:not(.full):not(.selected)::before {
+.day-card:not(.full):not(.selected):hover::before {
     background: #1e6f9f;
 }
 
+/* Active/pressed state */
+.day-card:not(.full):not(.selected):active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.2);
+}
+
+/* Selected state - the clicked date */
 .day-card.selected {
     border-color: #1e6f9f;
     background: #e8f4fc;
     box-shadow: 0 4px 16px -4px rgba(30,111,159,0.2);
     transform: translateY(-2px);
+    cursor: default;
 }
 
 .day-card.selected::before {
     background: #1e6f9f;
 }
 
+/* Full/unavailable days - not clickable */
 .day-card.full {
     opacity: 0.55;
     cursor: not-allowed;
     background: #f8f9fb;
     border-color: #e2e8f0;
+    pointer-events: none;
 }
 
 .day-card.full .day-name {
@@ -562,6 +577,7 @@ input:focus, select:focus, textarea:focus {
     font-weight: 600;
 }
 
+/* Day name (Sun, Mon, etc.) */
 .day-name {
     font-size: 0.75rem;
     font-weight: 600;
@@ -569,36 +585,41 @@ input:focus, select:focus, textarea:focus {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.3rem;
+    pointer-events: none;
 }
 
 .day-card.selected .day-name {
     color: #1e6f9f;
 }
 
+/* Day date number */
 .day-date {
     font-size: 1.15rem;
     font-weight: 700;
     color: #1a2c3e;
     margin: 0.2rem 0;
     line-height: 1.2;
+    pointer-events: none;
 }
 
 .day-card.selected .day-date {
     color: #1e6f9f;
 }
 
+/* Slots indicator */
 .slots {
     font-size: 0.7rem;
     font-weight: 500;
     color: #38a169;
     margin-top: 0.3rem;
+    pointer-events: none;
 }
 
 .slots.full {
     color: #e53e3e;
 }
 
-/* ========== TIME SLOTS (New Design) ========== */
+/* ========== TIME SLOTS (Clickable Time Buttons) ========== */
 .time-slots-container {
     margin-top: 0.6rem;
 }
@@ -610,6 +631,7 @@ input:focus, select:focus, textarea:focus {
     margin-top: 0.6rem;
 }
 
+/* Base time slot - clickable button */
 .time-slot {
     padding: 0.7rem 0.5rem;
     border: 1.5px solid #d5e0eb;
@@ -622,9 +644,12 @@ input:focus, select:focus, textarea:focus {
     transition: all 0.2s;
     background: white;
     position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.time-slot:hover:not(.taken):not(.disabled) {
+/* Hover for available times */
+.time-slot:not(.taken):not(.disabled):hover {
     border-color: #1e6f9f;
     background: #e8f4fc;
     color: #1e6f9f;
@@ -632,13 +657,21 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 4px 12px -4px rgba(30,111,159,0.15);
 }
 
+/* Active/pressed state */
+.time-slot:not(.taken):not(.disabled):active {
+    transform: translateY(0);
+}
+
+/* Selected time */
 .time-slot.selected {
     border-color: #1e6f9f;
     background: #1e6f9f;
     color: white;
     box-shadow: 0 4px 12px -4px rgba(30,111,159,0.3);
+    cursor: default;
 }
 
+/* Taken/unavailable times - not clickable */
 .time-slot.taken {
     opacity: 0.4;
     cursor: not-allowed;
@@ -646,16 +679,20 @@ input:focus, select:focus, textarea:focus {
     background: #f8f9fb;
     border-color: #e2e8f0;
     color: #a0aec0;
+    pointer-events: none;
 }
 
+/* Disabled state (waiting for date selection) */
 .time-slot.disabled {
     opacity: 0.5;
     cursor: not-allowed;
     background: #f8f9fb;
     border-color: #e2e8f0;
     color: #a0aec0;
+    pointer-events: none;
 }
 
+/* Placeholder when no date selected */
 .time-placeholder {
     padding: 1.5rem;
     text-align: center;
@@ -696,6 +733,7 @@ input:focus, select:focus, textarea:focus {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    background: #a0aec0;
 }
 
 /* ========== ALERTS ========== */
