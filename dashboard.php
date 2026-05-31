@@ -1,5 +1,5 @@
 <?php
-// ==================== PHP LOGIC (top) ====================
+// ==================== PHP LOGIC ====================
 require_once 'config.php';
 requireLogin();
 
@@ -22,8 +22,8 @@ $cleared_today = $pdo->query("
         AND EXISTS (SELECT 1 FROM payments py WHERE py.patient_id = p.patient_id AND py.amount_paid >= py.total_amount)
 ")->fetchColumn();
 
-// Recent patients data
-$recentPatients = $pdo->query("
+// Recent patients
+$stmt = $pdo->query("
     SELECT
         p.patient_id, p.fullname, p.age, p.gender, p.date_registered,
         COALESCE(py.total_amount, 0) AS total_amount,
@@ -32,12 +32,11 @@ $recentPatients = $pdo->query("
     LEFT JOIN payments py ON p.patient_id = py.patient_id
     ORDER BY p.date_registered DESC
     LIMIT 10
-")->fetchAll();
+");
+$recentPatients = $stmt->fetchAll();
 
-// Doctors for appointment modal
+// Doctors for dropdown
 $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
-
-// ==================== HTML OUTPUT (bottom) ====================
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -57,6 +56,10 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
             <a href="laboratory.php">Laboratory</a>
             <a href="patient_overview.php">Payment & Clearance</a>
             <a href="medicine.php">Medicines</a>
+            <?php if ($is_admin): ?>
+                <a href="xml_export.php">XML Export</a>
+                <a href="xml_import.php">XML Import</a>
+            <?php endif; ?>
         </nav>
     </header>
     <main>
@@ -93,26 +96,25 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
                     <tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Registered</th><th>Payment Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
-                <?php foreach ($recentPatients as $row): ?>
-                    <?php
+                <?php foreach ($recentPatients as $row):
                     if ($row['amount_paid'] <= 0) {
-                        $payment_status = 'Unpaid';
-                        $status_class = 'unpaid';
+                        $statusClass = 'unpaid';
+                        $statusText = 'Unpaid';
                     } elseif ($row['amount_paid'] >= $row['total_amount']) {
-                        $payment_status = 'Paid';
-                        $status_class = 'paid';
+                        $statusClass = 'paid';
+                        $statusText = 'Paid';
                     } else {
-                        $payment_status = 'Partial';
-                        $status_class = 'partial';
+                        $statusClass = 'partial';
+                        $statusText = 'Partial';
                     }
-                    ?>
+                ?>
                     <tr id="patient-row-<?= $row['patient_id'] ?>">
                         <td><?= $row['patient_id'] ?></td>
                         <td><?= htmlspecialchars($row['fullname']) ?></td>
                         <td><?= $row['age'] ?></td>
                         <td><?= $row['gender'] ?></td>
                         <td><?= date('M j', strtotime($row['date_registered'])) ?></td>
-                        <td><span class="status <?= $status_class ?>"><?= $payment_status ?></span></td>
+                        <td><span class="status <?= $statusClass ?>"><?= $statusText ?></span></td>
                         <td>
                             <a href="patient_overview.php?patient_id=<?= $row['patient_id'] ?>" class="btn primary">View</a>
                             <?php if ($is_admin): ?>
@@ -127,19 +129,149 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
     </main>
 </div>
 
-<!-- Register Patient Modal (HTML only) -->
-<div id="patient-form" class="modal"><div class="modal-content"><span class="close">&times;</span><h2>Register Patient</h2><form action="patient_register.php" method="POST"><div class="form-group"><label>Full Name</label><input type="text" name="fullname" required></div><div class="form-row"><div class="form-group"><label>Age</label><input type="number" name="age" required></div><div class="form-group"><label>Gender</label><select name="gender" required><option>Male</option><option>Female</option></select></div></div><div class="form-group"><label>Address</label><textarea name="address" required></textarea></div><div class="form-group"><label>Contact Number</label><input type="text" name="contact_number" required></div><button type="submit" class="btn primary">Register</button></form></div></div>
+<!-- Register Patient Modal (simple) -->
+<div id="patient-form" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Register Patient</h2>
+        <form action="patient_register.php" method="POST">
+            <div class="form-group"><label>Full Name</label><input type="text" name="fullname" required></div>
+            <div class="form-row">
+                <div class="form-group"><label>Age</label><input type="number" name="age" required></div>
+                <div class="form-group"><label>Gender</label><select name="gender" required><option>Male</option><option>Female</option></select></div>
+            </div>
+            <div class="form-group"><label>Address</label><textarea name="address" required></textarea></div>
+            <div class="form-group"><label>Contact Number</label><input type="text" name="contact_number" required></div>
+            <button type="submit" class="btn primary">Register</button>
+        </form>
+    </div>
+</div>
 
-<!-- Appointment Modal (HTML only) -->
-<div id="appointment-form" class="modal"><div class="modal-content"><span class="close">&times;</span><h2>New Appointment – Weekly View</h2><form action="appointment_process.php" method="POST"><div class="form-group"><label>Patient ID</label><input type="number" name="patient_id" required></div><div class="form-group"><label>Doctor</label><select name="doctor_id" id="weekly_doctor_select" required><option value="">Select Doctor</option><?php foreach ($doctors as $d): ?><option value="<?= $d['doctor_id'] ?>"><?= $d['doctor_name'] ?> (<?= $d['specialization'] ?>)</option><?php endforeach; ?></select></div><div class="form-group"><label>Select Date (Next 7 days)</label><div id="weekly-calendar"></div><input type="hidden" name="appointment_date" id="selected_date" required></div><div class="form-group"><label>Time</label><input type="time" name="appointment_time" required></div><div class="form-group"><label>Lab Required?</label><select name="laboratory_required"><option>No</option><option>Yes</option></select></div><div id="availability-status"></div><button type="submit" class="btn primary" id="weekly-book-btn" disabled>Book Appointment</button></form></div></div>
+<!-- Appointment Modal with Weekly Calendar -->
+<div id="appointment-form" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>New Appointment – Weekly View</h2>
+        <form action="appointment_process.php" method="POST" id="appointment-form-inner">
+            <div class="form-group">
+                <label>Patient ID</label>
+                <input type="number" name="patient_id" required>
+            </div>
+            <div class="form-group">
+                <label>Doctor</label>
+                <select name="doctor_id" id="weekly_doctor_select" required>
+                    <option value="">Select Doctor</option>
+                    <?php foreach ($doctors as $d): ?>
+                        <option value="<?= $d['doctor_id'] ?>"><?= htmlspecialchars($d['doctor_name']) ?> (<?= htmlspecialchars($d['specialization']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Select Date (Next 7 days)</label>
+                <div id="weekly-calendar"></div>
+                <input type="hidden" name="appointment_date" id="selected_date" required>
+            </div>
+            <div class="form-group">
+                <label>Time</label>
+                <input type="time" name="appointment_time" required>
+            </div>
+            <div class="form-group">
+                <label>Lab Required?</label>
+                <select name="laboratory_required">
+                    <option>No</option>
+                    <option>Yes</option>
+                </select>
+            </div>
+            <div id="availability-status" style="margin:10px 0"></div>
+            <button type="submit" class="btn primary" id="weekly-book-btn" disabled>Book Appointment</button>
+        </form>
+    </div>
+</div>
 
 <script src="assets/script.js"></script>
 <script>
-// JavaScript functions (everything at the bottom)
-function loadWeeklyCalendar() { ... } // same as before
-function deletePatient(id, name) { ... }
-// initialise event listeners
-document.getElementById('weekly_doctor_select').addEventListener('change', loadWeeklyCalendar);
+// ==================== WEEKLY CALENDAR JAVASCRIPT ====================
+function loadWeeklyCalendar() {
+    const doctorId = document.getElementById('weekly_doctor_select').value;
+    const calendarDiv = document.getElementById('weekly-calendar');
+    if (!doctorId) {
+        calendarDiv.innerHTML = '<div style="grid-column:span 7; text-align:center;">Please select a doctor first</div>';
+        return;
+    }
+
+    // Generate next 7 days
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        let d = new Date();
+        d.setDate(d.getDate() + i);
+        days.push(d);
+    }
+
+    calendarDiv.innerHTML = '<div style="grid-column:span 7; text-align:center;">Loading availability...</div>';
+
+    Promise.all(days.map(day => {
+        let dateStr = day.toISOString().split('T')[0];
+        return fetch(`check_availability.php?doctor_id=${doctorId}&date=${dateStr}`)
+            .then(res => res.json())
+            .then(data => ({ 
+                date: dateStr, 
+                day: day, 
+                available: data.available, 
+                remaining: data.remaining,
+                reason: data.reason || ''
+            }));
+    })).then(results => {
+        calendarDiv.innerHTML = '';
+        results.forEach(r => {
+            const dayName = r.day.toLocaleDateString('en-US', { weekday: 'short' });
+            const dateNum = r.day.getDate();
+            const month = r.day.getMonth() + 1;
+            const displayDate = `${month}/${dateNum}`;
+            const box = document.createElement('div');
+            box.className = `calendar-day ${r.available ? 'available' : 'unavailable'}`;
+            box.innerHTML = `<strong>${dayName}</strong><br>${displayDate}<br><small>${r.available ? r.remaining+' slots' : 'Full'}</small>`;
+            if (r.available) {
+                box.onclick = () => {
+                    document.getElementById('selected_date').value = r.date;
+                    document.getElementById('availability-status').innerHTML = `<span style="color:green;">✅ Selected: ${r.date}. Now choose time.</span>`;
+                    document.getElementById('weekly-book-btn').disabled = false;
+                    document.querySelectorAll('.calendar-day').forEach(b => b.classList.remove('selected'));
+                    box.classList.add('selected');
+                };
+            } else {
+                box.onclick = null;
+            }
+            calendarDiv.appendChild(box);
+        });
+    }).catch(err => {
+        calendarDiv.innerHTML = '<div style="grid-column:span 7; color:red;">Error loading calendar. Check console.</div>';
+        console.error(err);
+    });
+}
+
+// Attach event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const doctorSelect = document.getElementById('weekly_doctor_select');
+    if (doctorSelect) {
+        doctorSelect.addEventListener('change', loadWeeklyCalendar);
+    }
+});
+
+// ==================== DELETE PATIENT FUNCTION ====================
+function deletePatient(id, name) {
+    if (!confirm(`DELETE patient "${name}"?\n\nThis will permanently remove ALL records including:\n- Appointments\n- Laboratory results\n- Medicines\n- Payments\n\nThis CANNOT be undone!`)) return;
+    fetch(`delete_patient.php?patient_id=${id}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('patient-row-' + id).remove();
+                alert('Patient deleted successfully.');
+            } else {
+                alert('Delete failed: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(() => alert('Network error. Please try again.'));
+}
 </script>
 </body>
 </html>
