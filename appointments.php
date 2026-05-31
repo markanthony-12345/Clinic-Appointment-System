@@ -1,66 +1,64 @@
-<?php require_once 'config.php'; requireLogin(); ?>
-<div class="section">
-    <h2>Appointments</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Patient</th>
-                <th>Doctor</th>
-                <th>Date/Time</th> 
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php
-        $stmt = $pdo->query("SELECT a.*, p.fullname as patient_name, d.doctor_name FROM appointments a JOIN patients p ON a.patient_id = p.patient_id JOIN doctors d ON a.doctor_id = d.doctor_id ORDER BY a.appointment_date DESC");
-        while ($row = $stmt->fetch()):
-        ?>
-        <tr id="appt-row-<?= $row['appointment_id'] ?>">
-            <td><?= $row['appointment_id'] ?></td>
-            <td><?= htmlspecialchars($row['patient_name']) ?></td>
-            <td><?= htmlspecialchars($row['doctor_name']) ?></td>
-            <td><?= $row['appointment_date'] ?></td>
-            <td>
-                <span class="status <?= strtolower($row['status']) ?>" id="appt-status-<?= $row['appointment_id'] ?>">
-                    <?= $row['status'] ?>
-                </span>
-            </td>
-            <td>
-                <?php if ($row['status'] !== 'Completed' && $row['status'] !== 'Cancelled'): ?>
-                    <button class="btn success" onclick="markAppointmentDone(<?= $row['appointment_id'] ?>)">
-                        ✓ Mark Done
-                    </button>
-                <?php endif; ?>
-                <button class="btn" onclick="editAppointment(<?= $row['appointment_id'] ?>)">Edit</button>
-                <button class="btn danger" onclick="deleteAppointment(<?= $row['appointment_id'] ?>)">Cancel</button>
-            </td>
-        </tr>
-        <?php endwhile; ?>
-        </tbody>
-    </table>
+<!-- New Appointment Modal -->
+<div class="modal" id="appointmentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>New Appointment – Weekly View</h2>
+            <button class="close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form class="appointment-form" id="appointmentForm" action="save_appointment.php" method="POST">
+                
+                <!-- Patient ID -->
+                <div class="form-group">
+                    <label>Patient ID</label>
+                    <input type="text" name="patient_id" placeholder="Enter Patient ID" required>
+                </div>
+                
+                <!-- Doctor -->
+                <div class="form-group">
+                    <label>Doctor</label>
+                    <select name="doctor_id" id="doctorSelect" required onchange="loadWeekView()">
+                        <option value="">Select Doctor</option>
+                        <?php foreach ($doctors as $doc): ?>
+                        <option value="<?= $doc['doctor_id'] ?>">
+                            <?= htmlspecialchars($doc['doctor_name']) ?> 
+                            (<?= htmlspecialchars($doc['specialization'] ?? 'General') ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <!-- Weekly Calendar -->
+                <div class="form-group">
+                    <label>Select Date (Next 7 days)</label>
+                    <div class="weekly-calendar" id="weekDays">
+                        <!-- JS generates day cards here -->
+                    </div>
+                    <input type="hidden" name="appointment_date" id="selectedDate" required>
+                </div>
+                
+                <!-- Time Slots -->
+                <div class="form-group">
+                    <label>Time</label>
+                    <div class="time-slots-container" id="timeContainer">
+                        <div class="time-placeholder">
+                            Select a doctor and date first to see available times
+                        </div>
+                    </div>
+                    <input type="hidden" name="appointment_time" id="selectedTime" required>
+                </div>
+                
+                <!-- Lab Required -->
+                <div class="form-group">
+                    <label>Lab Required?</label>
+                    <select name="lab_required">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-book">Book Appointment</button>
+            </form>
+        </div>
+    </div>
 </div>
-<script>
-function markAppointmentDone(id) {
-    if (!confirm('Mark this appointment as Completed?')) return;
-    fetch(`mark_appointment_done.php?id=${id}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                document.getElementById('appt-status-' + id).textContent = 'Completed';
-                document.getElementById('appt-status-' + id).className = 'status completed';
-                // Remove the Mark Done button
-                location.reload();
-            } else {
-                alert('Failed to update: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(() => alert('Network error. Please try again.'));
-}
-function editAppointment(id) { window.location.href = `edit_appointment.php?id=${id}`; }
-function deleteAppointment(id) {
-    if (confirm('Cancel this appointment?'))
-        fetch(`delete_appointment.php?id=${id}`).then(() => location.reload());
-}
-</script>

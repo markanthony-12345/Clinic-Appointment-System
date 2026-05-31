@@ -357,7 +357,7 @@ input:focus, select:focus, textarea:focus {
     color: #b91c1c;
 }
 
-/* ========== MODAL ========== */
+/* ========== MODAL (Updated for Appointment Panel) ========== */
 .modal {
     display: none;
     position: fixed;
@@ -366,34 +366,374 @@ input:focus, select:focus, textarea:focus {
     top: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(3px);
+    background: rgba(26, 44, 62, 0.5);
+    backdrop-filter: blur(4px);
     overflow-y: auto;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 3rem;
+}
+
+.modal.active {
+    display: flex;
 }
 
 .modal-content {
     background: white;
-    margin: 2rem auto;
+    margin: 0 auto;
     width: 90%;
-    max-width: 650px;
+    max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
     border-radius: 1.5rem;
-    box-shadow: 0 25px 40px -12px rgba(0,0,0,0.25);
-    padding: 1.5rem;
+    box-shadow: 0 25px 60px -12px rgba(0,0,0,0.25);
     position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eef2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    border-radius: 1.5rem 1.5rem 0 0;
+}
+
+.modal-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1e3b4f;
+    margin: 0;
+}
+
+.modal-body {
+    padding: 1.5rem 2rem;
 }
 
 .close {
-    position: absolute;
-    right: 1.2rem;
-    top: 0.8rem;
+    background: none;
+    border: none;
     font-size: 1.8rem;
     cursor: pointer;
     color: #8ba3bc;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    padding: 0;
+    line-height: 1;
 }
+
 .close:hover {
     color: #1e3b4f;
+    background: #f0f4f8;
+}
+
+/* ========== APPOINTMENT PANEL FORM ========== */
+.appointment-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.appointment-form .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    color: #1e4a6e;
+    font-size: 0.9rem;
+}
+
+.appointment-form input[type="text"],
+.appointment-form input[type="time"],
+.appointment-form select {
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.9rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: #fafbfc;
+    color: #1a2c3e;
+}
+
+.appointment-form input[type="text"]:focus,
+.appointment-form input[type="time"]:focus,
+.appointment-form select:focus {
+    outline: none;
+    border-color: #1e6f9f;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(30,111,159,0.08);
+}
+
+.appointment-form select {
+    appearance: none;
+    background: #fafbfc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232c5f8a' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 1rem center;
+    cursor: pointer;
+}
+
+/* ========== WEEKLY CALENDAR (Clickable Date Buttons) ========== */
+.weekly-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* Base day card - clickable button style */
+.day-card {
+    border: 2px solid #e8eef4;
+    border-radius: 1rem;
+    padding: 0.9rem 0.4rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Top accent bar */
+.day-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+/* Hover state for available days */
+.day-card:not(.full):not(.selected):hover {
+    border-color: #1e6f9f;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px -8px rgba(30,111,159,0.25);
+}
+
+.day-card:not(.full):not(.selected):hover::before {
+    background: #1e6f9f;
+}
+
+/* Active/pressed state */
+.day-card:not(.full):not(.selected):active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.2);
+}
+
+/* Selected state - the clicked date */
+.day-card.selected {
+    border-color: #1e6f9f;
+    background: #e8f4fc;
+    box-shadow: 0 4px 16px -4px rgba(30,111,159,0.2);
+    transform: translateY(-2px);
+    cursor: default;
+}
+
+.day-card.selected::before {
+    background: #1e6f9f;
+}
+
+/* Full/unavailable days - not clickable */
+.day-card.full {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    pointer-events: none;
+}
+
+.day-card.full .day-name {
+    color: #a0aec0;
+}
+
+.day-card.full .day-date {
+    color: #a0aec0;
+}
+
+.day-card.full .slots {
+    color: #e53e3e;
+    font-weight: 600;
+}
+
+/* Day name (Sun, Mon, etc.) */
+.day-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.3rem;
+    pointer-events: none;
+}
+
+.day-card.selected .day-name {
+    color: #1e6f9f;
+}
+
+/* Day date number */
+.day-date {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a2c3e;
+    margin: 0.2rem 0;
+    line-height: 1.2;
+    pointer-events: none;
+}
+
+.day-card.selected .day-date {
+    color: #1e6f9f;
+}
+
+/* Slots indicator */
+.slots {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #38a169;
+    margin-top: 0.3rem;
+    pointer-events: none;
+}
+
+.slots.full {
+    color: #e53e3e;
+}
+
+/* ========== TIME SLOTS (Clickable Time Buttons) ========== */
+.time-slots-container {
+    margin-top: 0.6rem;
+}
+
+.time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* Base time slot - clickable button */
+.time-slot {
+    padding: 0.7rem 0.5rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.8rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #2c5f8a;
+    transition: all 0.2s;
+    background: white;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hover for available times */
+.time-slot:not(.taken):not(.disabled):hover {
+    border-color: #1e6f9f;
+    background: #e8f4fc;
+    color: #1e6f9f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.15);
+}
+
+/* Active/pressed state */
+.time-slot:not(.taken):not(.disabled):active {
+    transform: translateY(0);
+}
+
+/* Selected time */
+.time-slot.selected {
+    border-color: #1e6f9f;
+    background: #1e6f9f;
+    color: white;
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.3);
+    cursor: default;
+}
+
+/* Taken/unavailable times - not clickable */
+.time-slot.taken {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    color: #a0aec0;
+    pointer-events: none;
+}
+
+/* Disabled state (waiting for date selection) */
+.time-slot.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    color: #a0aec0;
+    pointer-events: none;
+}
+
+/* Placeholder when no date selected */
+.time-placeholder {
+    padding: 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 1rem;
+    color: #718096;
+    font-size: 0.9rem;
+    border: 1.5px dashed #d5e0eb;
+}
+
+/* ========== BOOK APPOINTMENT BUTTON ========== */
+.btn-book {
+    width: 100%;
+    padding: 1rem;
+    background: #1e6f9f;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(30,111,159,0.2);
+}
+
+.btn-book:hover:not(:disabled) {
+    background: #155d87;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(30,111,159,0.3);
+}
+
+.btn-book:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-book:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    background: #a0aec0;
 }
 
 /* ========== ALERTS ========== */
@@ -453,45 +793,6 @@ input:focus, select:focus, textarea:focus {
     font-weight: 700;
 }
 
-/* ========== WEEKLY CALENDAR ========== */
-.calendar-day {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
-    text-align: center;
-    transition: 0.2s;
-    cursor: pointer;
-}
-
-.calendar-day.available {
-    background-color: #e0f2e9;
-    cursor: pointer;
-}
-
-.calendar-day.available:hover {
-    transform: scale(1.02);
-    background-color: #c8e6d9;
-    border-color: #1e6f9f;
-}
-
-.calendar-day.unavailable {
-    background-color: #fee2e2;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.calendar-day.selected {
-    border: 2px solid #1e6f9f;
-    background-color: #c8e6d9;
-}
-
-#weekly-calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .container {
@@ -530,12 +831,56 @@ input:focus, select:focus, textarea:focus {
         display: inline-block;
         margin-bottom: 0.3rem;
     }
-    #weekly-calendar {
+    
+    /* Weekly Calendar Responsive */
+    .weekly-calendar {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.4rem;
+    }
+    .day-card {
+        padding: 0.6rem 0.2rem;
+    }
+    .day-date {
+        font-size: 0.95rem;
+    }
+    .day-name {
+        font-size: 0.65rem;
+    }
+    .slots {
+        font-size: 0.6rem;
+    }
+    
+    /* Time Slots Responsive */
+    .time-slots-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    /* Modal Responsive */
+    .modal {
+        padding-top: 1rem;
+        align-items: flex-start;
     }
     .modal-content {
         width: 95%;
-        padding: 1rem;
-        margin: 1rem auto;
+        border-radius: 1.25rem;
+    }
+    .modal-header {
+        padding: 1.2rem 1.5rem;
+    }
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    .modal-body {
+        padding: 1.2rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .weekly-calendar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .time-slots-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
