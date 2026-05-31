@@ -27,10 +27,8 @@ function resetForm() {
     const timeContainer = document.getElementById('timeContainer');
     if (timeContainer) {
         timeContainer.innerHTML = `
-            <div class="time-input-wrapper">
-                <input type="time" name="appointment_time" id="timeInput" value="--:-- --" disabled>
-                <span class="time-icon">&#x23F0;</span>
-            </div>
+            <input type="text" id="timeDisplay" value="--:-- --" readonly disabled>
+            <span class="time-icon">&#x23F0;</span>
         `;
     }
     
@@ -40,7 +38,7 @@ function resetForm() {
     const selectedTime = document.getElementById('selectedTime');
     if (selectedTime) selectedTime.value = '';
     
-    const bookBtn = document.querySelector('.btn-book');
+    const bookBtn = document.getElementById('bookBtn');
     if (bookBtn) bookBtn.disabled = true;
 }
 
@@ -63,26 +61,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
             loadWeekView();
-            // Reset time input
+            // Reset time display
             const timeContainer = document.getElementById('timeContainer');
             if (timeContainer) {
                 timeContainer.innerHTML = `
-                    <div class="time-input-wrapper">
-                        <input type="time" name="appointment_time" id="timeInput" value="--:-- --" disabled>
-                        <span class="time-icon">&#x23F0;</span>
-                    </div>
+                    <input type="text" id="timeDisplay" value="--:-- --" readonly disabled>
+                    <span class="time-icon">&#x23F0;</span>
                 `;
             }
             const selectedDate = document.getElementById('selectedDate');
             if (selectedDate) selectedDate.value = '';
             const selectedTime = document.getElementById('selectedTime');
             if (selectedTime) selectedTime.value = '';
-            validateForm();
+            checkFormValid();
         });
     }
     
+    // Patient ID input listener
+    const patientId = document.getElementById('patientId');
+    if (patientId) {
+        patientId.addEventListener('input', checkFormValid);
+    }
+    
     // Initialize book button as disabled
-    const bookBtn = document.querySelector('.btn-book');
+    const bookBtn = document.getElementById('bookBtn');
     if (bookBtn) bookBtn.disabled = true;
 });
 
@@ -151,63 +153,115 @@ function selectDate(date, element) {
         d.classList.remove('selected');
     });
     
-    // Add selected class
+    // Add selected class to clicked element
     element.classList.add('selected');
     
-    // Update hidden input
+    // Update hidden date input
     const selectedDate = document.getElementById('selectedDate');
     if (selectedDate) selectedDate.value = date;
     
-    // Enable time input
+    // Enable and show time picker
     const timeContainer = document.getElementById('timeContainer');
     if (timeContainer) {
-        timeContainer.innerHTML = `
-            <div class="time-input-wrapper">
-                <input type="time" name="appointment_time" id="timeInput" required>
-                <span class="time-icon">&#x23F0;</span>
-            </div>
-        `;
+        // Get available times for this date
+        const availableTimes = getAvailableTimes(date);
         
-        // Add change listener to time input
-        const timeInput = document.getElementById('timeInput');
-        if (timeInput) {
-            timeInput.addEventListener('change', function() {
-                const selectedTime = document.getElementById('selectedTime');
-                if (selectedTime) selectedTime.value = this.value;
-                validateForm();
+        if (availableTimes.length === 0) {
+            timeContainer.innerHTML = `
+                <input type="text" value="No slots available" readonly disabled style="color: #e53e3e;">
+                <span class="time-icon">&#x23F0;</span>
+            `;
+        } else {
+            // Build time slot buttons
+            let timeHtml = '<div class="time-slots-grid">';
+            availableTimes.forEach(time => {
+                timeHtml += `<div class="time-slot" onclick="selectTime('${time}', this)">${time}</div>`;
             });
+            timeHtml += '</div>';
+            timeContainer.innerHTML = timeHtml;
         }
     }
     
-    validateForm();
+    checkFormValid();
+}
+
+// Get available times (simulated)
+function getAvailableTimes(date) {
+    const allTimes = ['09:00 AM', '10:00 AM', '11:00 AM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
+    const seed = date;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+        hash = hash & hash;
+    }
+    
+    // Randomly remove 2-4 slots
+    const removeCount = 2 + (Math.abs(hash) % 3);
+    const taken = new Set();
+    for (let i = 0; i < removeCount; i++) {
+        taken.add(allTimes[Math.abs((hash + i * 7) % allTimes.length)]);
+    }
+    
+    return allTimes.filter(t => !taken.has(t));
+}
+
+// ==================== TIME SELECTION ====================
+function selectTime(time, element) {
+    // Remove previous selection
+    document.querySelectorAll('.time-slot').forEach(t => {
+        t.classList.remove('selected');
+    });
+    
+    // Add selected class
+    element.classList.add('selected');
+    
+    // Update hidden time input
+    const selectedTime = document.getElementById('selectedTime');
+    if (selectedTime) selectedTime.value = time;
+    
+    // Update display
+    const timeDisplay = document.getElementById('timeDisplay');
+    if (timeDisplay) timeDisplay.value = time;
+    
+    checkFormValid();
 }
 
 // ==================== FORM VALIDATION ====================
-function validateForm() {
-    const patientId = document.querySelector('input[name="patient_id"]');
+function checkFormValid() {
+    const patientId = document.getElementById('patientId');
     const doctorId = document.getElementById('doctorSelect');
     const date = document.getElementById('selectedDate');
     const time = document.getElementById('selectedTime');
+    const bookBtn = document.getElementById('bookBtn');
     
-    const bookBtn = document.querySelector('.btn-book');
+    if (!bookBtn) return;
     
-    const isValid = patientId && patientId.value.trim() && 
-                   doctorId && doctorId.value && 
-                   date && date.value && 
-                   time && time.value;
+    // Check all required fields
+    const hasPatient = patientId && patientId.value.trim() !== '';
+    const hasDoctor = doctorId && doctorId.value !== '';
+    const hasDate = date && date.value !== '';
+    const hasTime = time && time.value !== '';
     
-    if (bookBtn) {
-        bookBtn.disabled = !isValid;
+    console.log('Validation:', { hasPatient, hasDoctor, hasDate, hasTime });
+    console.log('Values:', { 
+        patient: patientId ? patientId.value : 'null', 
+        doctor: doctorId ? doctorId.value : 'null',
+        date: date ? date.value : 'null',
+        time: time ? time.value : 'null'
+    });
+    
+    const isValid = hasPatient && hasDoctor && hasDate && hasTime;
+    
+    bookBtn.disabled = !isValid;
+    
+    if (isValid) {
+        bookBtn.style.opacity = '1';
+        bookBtn.style.cursor = 'pointer';
+    } else {
+        bookBtn.style.opacity = '0.5';
+        bookBtn.style.cursor = 'not-allowed';
     }
 }
-
-// Add input listeners for real-time validation
-document.addEventListener('DOMContentLoaded', function() {
-    const patientInput = document.querySelector('input[name="patient_id"]');
-    if (patientInput) {
-        patientInput.addEventListener('input', validateForm);
-    }
-});
 
 // ==================== TABLE ACTIONS ====================
 function markDone(id) {
