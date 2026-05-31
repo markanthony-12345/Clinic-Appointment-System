@@ -810,3 +810,57 @@ input:focus, select:focus, textarea:focus {
         grid-template-columns: repeat(3, 1fr);
     }
 }
+
+/* ========== TIME SLOTS GRID ========== */
+.time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.time-slot {
+    padding: 0.6rem 0.3rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.6rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #2c5f8a;
+    transition: all 0.2s;
+    background: white;
+    user-select: none;
+}
+
+.time-slot:hover {
+    border-color: #1e6f9f;
+    background: #e8f4fc;
+    color: #1e6f9f;
+    transform: translateY(-2px);
+}
+
+.time-slot.selected {
+    border-color: #1e6f9f;
+    background: #1e6f9f;
+    color: white;
+    box-shadow: 0 2px 8px rgba(30,111,159,0.3);
+}
+
+/* Time display input (readonly) */
+#timeDisplay {
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.9rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: #f8f9fb;
+    color: #a0aec0;
+    cursor: not-allowed;
+}
+
+#timeDisplay:not([disabled]) {
+    background: #fafbfc;
+    color: #1a2c3e;
+}
