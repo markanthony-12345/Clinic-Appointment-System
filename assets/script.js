@@ -1,340 +1,886 @@
-// Modal handling
-const modals = document.querySelectorAll('.modal');
-const triggers = document.querySelectorAll('[href*="#"]');
-triggers.forEach(trigger => {
-    trigger.addEventListener('click', e => {
-        e.preventDefault();
-        const modal = document.querySelector(trigger.getAttribute('href'));
-        if (modal) modal.style.display = 'block';
-    });
-});
-document.querySelectorAll('.close').forEach(btn => {
-    btn.addEventListener('click', () => btn.closest('.modal').style.display = 'none');
-});
-window.addEventListener('click', e => {
-    if (e.target.classList.contains('modal')) e.target.style.display = 'none';
-});
+/* ========== RESET & BASE ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-// Doctor availability check
-function checkAvailability() {
-    const doctor = document.getElementById('doctor_select')?.value;
-    const date = document.getElementById('appointment_date')?.value;
-    const statusDiv = document.getElementById('availability-status');
-    const bookBtn = document.getElementById('book-btn');
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #f4f7fc;
+    color: #1a2c3e;
+    line-height: 1.5;
+}
 
-    // Enable button by default so user can always try to book
-    if (bookBtn) bookBtn.disabled = false;
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
 
-    if (!doctor || !date) {
-        if (statusDiv) statusDiv.innerHTML = '';
-        return;
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+}
+
+/* ========== HEADER & NAVIGATION ========== */
+header {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 1rem 1.8rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+header > div:first-child {
+    font-weight: 500;
+    color: #2c3e50;
+    background: #eef2f8;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+}
+
+nav {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+nav a {
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    color: #2c5f8a;
+    background: transparent;
+}
+
+nav a:hover {
+    background: #e6f0f9;
+    color: #1a4b6e;
+}
+
+nav a.active {
+    background: #1e6f9f;
+    color: white;
+    box-shadow: 0 2px 6px rgba(30,111,159,0.2);
+}
+
+/* ========== DASHBOARD STATS ========== */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 1.25rem;
+    padding: 1.4rem 1.2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid rgba(0,0,0,0.03);
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px -12px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #5b7f9c;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stat-card h3 i {
+    font-size: 1.1rem;
+    color: #2c7cb6;
+}
+
+.stat-number {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #1a3b4e;
+    line-height: 1.2;
+}
+
+/* ========== QUICK ACTIONS ========== */
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.4rem;
+    background: white;
+    border: 1px solid #dce5ec;
+    border-radius: 2rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: #2c5f8a;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 160px;
+}
+
+.action-btn.primary {
+    background: #1e6f9f;
+    border-color: #1e6f9f;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.action-btn:hover {
+    background: #e6f0f9;
+    border-color: #bdd4e6;
+    transform: translateY(-1px);
+}
+
+.action-btn.primary:hover {
+    background: #155d87;
+    transform: translateY(-1px);
+}
+
+/* ========== CARDS & FORMS ========== */
+.card {
+    background: white;
+    border-radius: 1.25rem;
+    padding: 1.6rem 1.8rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid #eef2f6;
+}
+
+.card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    color: #1e4a6e;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    color: #2c5f8a;
+    font-size: 0.85rem;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border: 1px solid #cddae9;
+    border-radius: 0.8rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: 0.2s;
+    background: #fff;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #1e6f9f;
+    box-shadow: 0 0 0 3px rgba(30,111,159,0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.card .form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.card .form-row input {
+    flex: 2;
+    min-width: 200px;
+}
+
+.card .form-row .btn {
+    flex: 0 0 auto;
+    padding: 0.6rem 1.2rem;
+    white-space: nowrap;
+}
+
+/* ========== BUTTONS ========== */
+.btn {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    background: #eef2f8;
+    color: #2c5f8a;
+}
+
+.btn.primary {
+    background: #1e6f9f;
+    color: white;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.btn.primary:hover {
+    background: #155d87;
+    transform: translateY(-1px);
+}
+
+.btn.danger {
+    background: #fce8e6;
+    color: #c23d2e;
+}
+
+.btn.danger:hover {
+    background: #f5d6d3;
+}
+
+.btn.success {
+    background: #e0f2e9;
+    color: #1e6f3f;
+}
+
+/* ========== TABLES ========== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.table th {
+    text-align: left;
+    padding: 1rem 0.5rem 0.8rem 0;
+    font-weight: 600;
+    color: #4a6f8c;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table td {
+    padding: 0.9rem 0.5rem 0.9rem 0;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+}
+
+.table tr:last-child td {
+    border-bottom: none;
+}
+
+.table td .btn {
+    padding: 0.4rem 1rem;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    background: #eef2f8;
+    color: #2c5f8a;
+    border: none;
+    border-radius: 1.5rem;
+    cursor: pointer;
+}
+
+.table td .btn.primary {
+    background: #1e6f9f;
+    color: white;
+}
+
+.table td .btn.delete-btn {
+    background: #fee2e2;
+    color: #c23d2e;
+}
+
+.table td .btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+/* Status badges */
+.status {
+    display: inline-block;
+    padding: 0.2rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f1f3f5;
+    color: #4a5568;
+}
+
+.status.completed,
+.status.paid,
+.status.taken {
+    background: #e0f2e9;
+    color: #1e6f3f;
+}
+
+.status.pending,
+.status.unpaid,
+.status.not-taken {
+    background: #fff3e0;
+    color: #c26b1a;
+}
+
+.status.cancelled,
+.status.partial {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* ========== MODAL (Updated for Appointment Panel) ========== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 44, 62, 0.5);
+    backdrop-filter: blur(4px);
+    overflow-y: auto;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 3rem;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    margin: 0 auto;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 60px -12px rgba(0,0,0,0.25);
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
     }
-
-    fetch(`check_availability.php?doctor_id=${doctor}&date=${date}`)
-        .then(r => r.json())
-        .then(data => {
-            if (data.available) {
-                statusDiv.innerHTML = `<span style="color:green;">✅ Available! ${data.remaining} slot(s) left.</span>`;
-                bookBtn.disabled = false;
-            } else {
-                statusDiv.innerHTML = `<span style="color:red;">❌ Fully booked for this date (max ${data.max_patients}).</span>`;
-                bookBtn.disabled = false; // Still allow booking, just warn
-            }
-        })
-        .catch(() => {
-            // If check fails, still allow booking
-            if (statusDiv) statusDiv.innerHTML = '';
-            if (bookBtn) bookBtn.disabled = false;
-        });
-}
-
-// Enable book button on page load in case form already has values
-document.addEventListener('DOMContentLoaded', () => {
-    const bookBtn = document.getElementById('book-btn');
-    if (bookBtn) bookBtn.disabled = false;
-});
-
-// Clearance print
-function printClearance(id) {
-    window.open(`print_clearance.php?patient_id=${id}`, '_blank');
-}
-
-// ==================== MODAL FUNCTIONS ====================
-function openModal() {
-    document.getElementById('appointmentModal').classList.add('active');
-    document.body.style.overflow = 'hidden'; // Prevent background scrolling
-    loadWeekView();
-}
-
-function closeModal() {
-    document.getElementById('appointmentModal').classList.remove('active');
-    document.body.style.overflow = '';
-    resetForm();
-}
-
-function resetForm() {
-    document.getElementById('appointmentForm').reset();
-    document.getElementById('weekDays').innerHTML = '';
-    document.getElementById('timeContainer').innerHTML = `
-        <div class="time-placeholder">
-            Select a doctor and date first to see available times
-        </div>
-    `;
-    document.getElementById('selectedDate').value = '';
-    document.getElementById('selectedTime').value = '';
-    
-    // Reset book button
-    const bookBtn = document.querySelector('.btn-book');
-    if (bookBtn) bookBtn.disabled = true;
-}
-
-// Close modal on outside click
-document.getElementById('appointmentModal').addEventListener('click', function(e) {
-    if (e.target === this) closeModal();
-});
-
-// Close on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeModal();
-});
-
-// ==================== WEEKLY CALENDAR ====================
-function loadWeekView() {
-    const doctorId = document.getElementById('doctorSelect').value;
-    const container = document.getElementById('weekDays');
-    
-    if (!doctorId) {
-        container.innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">Select a doctor first</p>';
-        return;
-    }
-    
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-    let html = '';
-    
-    for (let i = 0; i < 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        
-        const dayName = days[date.getDay()];
-        const month = months[date.getMonth()];
-        const dayNum = date.getDate();
-        const fullDate = date.toISOString().split('T')[0];
-        
-        // For demo: simulate slot availability
-        // In production, replace with AJAX call to check real availability
-        const slots = getSimulatedSlots(fullDate, doctorId);
-        
-        const isFull = slots === 0;
-        const statusClass = isFull ? 'full' : '';
-        const statusText = isFull ? 'Full' : `${slots} slots`;
-        
-        // Build clickable day card
-        // If full, no onclick handler and 'full' class disables pointer events
-        html += `
-            <div class="day-card ${statusClass}" 
-                 data-date="${fullDate}"
-                 data-slots="${slots}"
-                 ${!isFull ? `onclick="selectDate('${fullDate}', this)"` : ''}>
-                <div class="day-name">${dayName}</div>
-                <div class="day-date">${month}/${dayNum}</div>
-                <div class="slots ${isFull ? 'full' : ''}">${statusText}</div>
-            </div>
-        `;
-    }
-    
-    container.innerHTML = html;
-}
-
-// Simulate slot availability (replace with real API call)
-function getSimulatedSlots(date, doctorId) {
-    // Generate pseudo-random but consistent slots based on date + doctor
-    const seed = date.split('-').join('') + doctorId;
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash = hash & hash;
-    }
-    return Math.abs(hash % 12); // 0-11 slots
-}
-
-// ==================== DATE SELECTION ====================
-function selectDate(date, element) {
-    // Remove previous selection
-    document.querySelectorAll('.day-card').forEach(d => {
-        d.classList.remove('selected');
-    });
-    
-    // Add selected class to clicked element
-    element.classList.add('selected');
-    
-    // Update hidden input
-    document.getElementById('selectedDate').value = date;
-    
-    // Clear previous time selection
-    document.getElementById('selectedTime').value = '';
-    
-    // Load available times for this date
-    loadTimes(date);
-    
-    // Update validation
-    validateForm();
-}
-
-// ==================== TIME SLOTS ====================
-function loadTimes(date) {
-    const doctorId = document.getElementById('doctorSelect').value;
-    const container = document.getElementById('timeContainer');
-    
-    if (!doctorId) {
-        container.innerHTML = `
-            <div class="time-placeholder">
-                Please select a doctor first
-            </div>
-        `;
-        return;
-    }
-    
-    // All possible time slots
-    const allSlots = [
-        '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-        '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
-    ];
-    
-    // In production, fetch from server:
-    // fetch(`get_available_times.php?doctor_id=${doctorId}&date=${date}`)
-    //     .then(r => r.json())
-    //     .then(availableSlots => { ... });
-    
-    // Simulate: mark some slots as taken
-    const availableSlots = getSimulatedAvailableSlots(date, doctorId, allSlots);
-    
-    if (availableSlots.length === 0) {
-        container.innerHTML = `
-            <div class="time-placeholder" style="color: #e53e3e; border-color: #feb2b2;">
-                No available slots for this date. Please select another date.
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '<div class="time-slots-grid">';
-    allSlots.forEach(slot => {
-        const isAvailable = availableSlots.includes(slot);
-        const className = isAvailable ? '' : 'taken';
-        const onclick = isAvailable ? `onclick="selectTime('${slot}', this)"` : '';
-        
-        html += `<div class="time-slot ${className}" ${onclick}>${slot}</div>`;
-    });
-    html += '</div>';
-    
-    container.innerHTML = html;
-}
-
-// Simulate available slots (replace with real API call)
-function getSimulatedAvailableSlots(date, doctorId, allSlots) {
-    const seed = date + doctorId;
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash = hash & hash;
-    }
-    
-    // Randomly mark 2-4 slots as taken
-    const takenCount = 2 + (Math.abs(hash) % 3);
-    const taken = new Set();
-    for (let i = 0; i < takenCount; i++) {
-        taken.add(allSlots[Math.abs((hash + i * 7) % allSlots.length)]);
-    }
-    
-    return allSlots.filter(slot => !taken.has(slot));
-}
-
-// ==================== TIME SELECTION ====================
-function selectTime(time, element) {
-    // Remove previous selection
-    document.querySelectorAll('.time-slot').forEach(t => {
-        t.classList.remove('selected');
-    });
-    
-    // Add selected class to clicked element
-    element.classList.add('selected');
-    
-    // Update hidden input
-    document.getElementById('selectedTime').value = time;
-    
-    // Update validation
-    validateForm();
-}
-
-// ==================== FORM VALIDATION ====================
-function validateForm() {
-    const patientId = document.querySelector('input[name="patient_id"]').value.trim();
-    const doctorId = document.getElementById('doctorSelect').value;
-    const date = document.getElementById('selectedDate').value;
-    const time = document.getElementById('selectedTime').value;
-    
-    const bookBtn = document.querySelector('.btn-book');
-    
-    const isValid = patientId && doctorId && date && time;
-    
-    if (bookBtn) {
-        bookBtn.disabled = !isValid;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-// Add input listeners for real-time validation
-document.addEventListener('DOMContentLoaded', function() {
-    const patientInput = document.querySelector('input[name="patient_id"]');
-    const doctorSelect = document.getElementById('doctorSelect');
-    
-    if (patientInput) {
-        patientInput.addEventListener('input', validateForm);
-    }
-    if (doctorSelect) {
-        doctorSelect.addEventListener('change', function() {
-            // Reload week view when doctor changes
-            loadWeekView();
-            // Clear selections
-            document.getElementById('selectedDate').value = '';
-            document.getElementById('selectedTime').value = '';
-            document.getElementById('timeContainer').innerHTML = `
-                <div class="time-placeholder">
-                    Select a date to see available times
-                </div>
-            `;
-            validateForm();
-        });
-    }
-    
-    // Initialize book button as disabled
-    const bookBtn = document.querySelector('.btn-book');
-    if (bookBtn) bookBtn.disabled = true;
-});
-
-// ==================== TABLE ACTIONS ====================
-function markDone(id) {
-    if (!confirm('Mark this appointment as Completed?')) return;
-    
-    fetch(`mark_appointment_done.php?id=${id}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Failed: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(() => alert('Network error'));
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eef2f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    border-radius: 1.5rem 1.5rem 0 0;
 }
 
-function editAppt(id) {
-    window.location.href = `edit_appointment.php?id=${id}`;
+.modal-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1e3b4f;
+    margin: 0;
 }
 
-function cancelAppt(id) {
-    if (!confirm('Cancel this appointment?')) return;
-    fetch(`delete_appointment.php?id=${id}`)
-        .then(() => location.reload())
-        .catch(() => alert('Network error'));
+.modal-body {
+    padding: 1.5rem 2rem;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #8ba3bc;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+    padding: 0;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #1e3b4f;
+    background: #f0f4f8;
+}
+
+/* ========== APPOINTMENT PANEL FORM ========== */
+.appointment-form .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.appointment-form .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    color: #1e4a6e;
+    font-size: 0.9rem;
+}
+
+.appointment-form input[type="text"],
+.appointment-form input[type="time"],
+.appointment-form select {
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.9rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    background: #fafbfc;
+    color: #1a2c3e;
+}
+
+.appointment-form input[type="text"]:focus,
+.appointment-form input[type="time"]:focus,
+.appointment-form select:focus {
+    outline: none;
+    border-color: #1e6f9f;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(30,111,159,0.08);
+}
+
+.appointment-form select {
+    appearance: none;
+    background: #fafbfc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232c5f8a' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 1rem center;
+    cursor: pointer;
+}
+
+/* ========== WEEKLY CALENDAR (Clickable Date Buttons) ========== */
+.weekly-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* Base day card - clickable button style */
+.day-card {
+    border: 2px solid #e8eef4;
+    border-radius: 1rem;
+    padding: 0.9rem 0.4rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    background: white;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Top accent bar */
+.day-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+/* Hover state for available days */
+.day-card:not(.full):not(.selected):hover {
+    border-color: #1e6f9f;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px -8px rgba(30,111,159,0.25);
+}
+
+.day-card:not(.full):not(.selected):hover::before {
+    background: #1e6f9f;
+}
+
+/* Active/pressed state */
+.day-card:not(.full):not(.selected):active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.2);
+}
+
+/* Selected state - the clicked date */
+.day-card.selected {
+    border-color: #1e6f9f;
+    background: #e8f4fc;
+    box-shadow: 0 4px 16px -4px rgba(30,111,159,0.2);
+    transform: translateY(-2px);
+    cursor: default;
+}
+
+.day-card.selected::before {
+    background: #1e6f9f;
+}
+
+/* Full/unavailable days - not clickable */
+.day-card.full {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    pointer-events: none;
+}
+
+.day-card.full .day-name {
+    color: #a0aec0;
+}
+
+.day-card.full .day-date {
+    color: #a0aec0;
+}
+
+.day-card.full .slots {
+    color: #e53e3e;
+    font-weight: 600;
+}
+
+/* Day name (Sun, Mon, etc.) */
+.day-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.3rem;
+    pointer-events: none;
+}
+
+.day-card.selected .day-name {
+    color: #1e6f9f;
+}
+
+/* Day date number */
+.day-date {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a2c3e;
+    margin: 0.2rem 0;
+    line-height: 1.2;
+    pointer-events: none;
+}
+
+.day-card.selected .day-date {
+    color: #1e6f9f;
+}
+
+/* Slots indicator */
+.slots {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #38a169;
+    margin-top: 0.3rem;
+    pointer-events: none;
+}
+
+.slots.full {
+    color: #e53e3e;
+}
+
+/* ========== TIME SLOTS (Clickable Time Buttons) ========== */
+.time-slots-container {
+    margin-top: 0.6rem;
+}
+
+.time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem;
+    margin-top: 0.6rem;
+}
+
+/* Base time slot - clickable button */
+.time-slot {
+    padding: 0.7rem 0.5rem;
+    border: 1.5px solid #d5e0eb;
+    border-radius: 0.8rem;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #2c5f8a;
+    transition: all 0.2s;
+    background: white;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hover for available times */
+.time-slot:not(.taken):not(.disabled):hover {
+    border-color: #1e6f9f;
+    background: #e8f4fc;
+    color: #1e6f9f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.15);
+}
+
+/* Active/pressed state */
+.time-slot:not(.taken):not(.disabled):active {
+    transform: translateY(0);
+}
+
+/* Selected time */
+.time-slot.selected {
+    border-color: #1e6f9f;
+    background: #1e6f9f;
+    color: white;
+    box-shadow: 0 4px 12px -4px rgba(30,111,159,0.3);
+    cursor: default;
+}
+
+/* Taken/unavailable times - not clickable */
+.time-slot.taken {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    color: #a0aec0;
+    pointer-events: none;
+}
+
+/* Disabled state (waiting for date selection) */
+.time-slot.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8f9fb;
+    border-color: #e2e8f0;
+    color: #a0aec0;
+    pointer-events: none;
+}
+
+/* Placeholder when no date selected */
+.time-placeholder {
+    padding: 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 1rem;
+    color: #718096;
+    font-size: 0.9rem;
+    border: 1.5px dashed #d5e0eb;
+}
+
+/* ========== BOOK APPOINTMENT BUTTON ========== */
+.btn-book {
+    width: 100%;
+    padding: 1rem;
+    background: #1e6f9f;
+    color: white;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(30,111,159,0.2);
+}
+
+.btn-book:hover:not(:disabled) {
+    background: #155d87;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(30,111,159,0.3);
+}
+
+.btn-book:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-book:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    background: #a0aec0;
+}
+
+/* ========== ALERTS ========== */
+.alert {
+    padding: 0.8rem 1.2rem;
+    border-radius: 0.8rem;
+    margin-bottom: 1.2rem;
+    font-weight: 500;
+}
+
+.alert.success {
+    background: #e0f2e9;
+    color: #1e6f3f;
+    border-left: 4px solid #1e6f3f;
+}
+
+.alert.error {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-left: 4px solid #b91c1c;
+}
+
+/* ========== CLEARANCE CHECKLIST ========== */
+.checklist-section {
+    margin: 1.5rem 0;
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid #ecf3f8;
+}
+
+.checklist-item label {
+    font-weight: 500;
+    color: #2c5f8a;
+}
+
+.checklist-item input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: #1e6f9f;
+}
+
+.clearance-status {
+    background: #f8fafc;
+    padding: 1rem;
+    border-radius: 1rem;
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.clearance-status span.completed {
+    color: #1e6f3f;
+    font-weight: 700;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    header {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    nav {
+        justify-content: center;
+    }
+    .quick-actions {
+        justify-content: center;
+    }
+    .action-btn {
+        min-width: auto;
+        padding: 0.5rem 1.2rem;
+    }
+    .card .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .card .form-row .btn {
+        white-space: normal;
+    }
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    .table {
+        display: block;
+        overflow-x: auto;
+    }
+    .table td .btn {
+        display: inline-block;
+        margin-bottom: 0.3rem;
+    }
+    
+    /* Weekly Calendar Responsive */
+    .weekly-calendar {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.4rem;
+    }
+    .day-card {
+        padding: 0.6rem 0.2rem;
+    }
+    .day-date {
+        font-size: 0.95rem;
+    }
+    .day-name {
+        font-size: 0.65rem;
+    }
+    .slots {
+        font-size: 0.6rem;
+    }
+    
+    /* Time Slots Responsive */
+    .time-slots-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    /* Modal Responsive */
+    .modal {
+        padding-top: 1rem;
+        align-items: flex-start;
+    }
+    .modal-content {
+        width: 95%;
+        border-radius: 1.25rem;
+    }
+    .modal-header {
+        padding: 1.2rem 1.5rem;
+    }
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    .modal-body {
+        padding: 1.2rem 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .weekly-calendar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .time-slots-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
