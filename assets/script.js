@@ -1,107 +1,77 @@
-// ==================== MODAL FUNCTIONS ====================
-function openModal() {
-    const modal = document.getElementById('appointmentModal');
+// ==================== APPOINTMENT MODAL ====================
+function openAppointmentModal() {
+    const modal = document.getElementById('appointmentModalOverlay');
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        loadWeekView();
+        resetAppointmentForm();
     }
 }
 
-function closeModal() {
-    const modal = document.getElementById('appointmentModal');
+function closeAppointmentModal() {
+    const modal = document.getElementById('appointmentModalOverlay');
     if (modal) {
         modal.classList.remove('active');
         document.body.style.overflow = '';
-        resetForm();
+        resetAppointmentForm();
     }
 }
 
-function resetForm() {
+function resetAppointmentForm() {
     const form = document.getElementById('appointmentForm');
     if (form) form.reset();
     
-    const weekDays = document.getElementById('weekDays');
-    if (weekDays) weekDays.innerHTML = '';
+    const calendar = document.getElementById('appointmentCalendar');
+    if (calendar) calendar.innerHTML = '';
     
-    const timeContainer = document.getElementById('timeContainer');
-    if (timeContainer) {
-        timeContainer.innerHTML = `
-            <input type="text" id="timeDisplay" value="--:-- --" readonly disabled>
-            <span class="time-icon">&#x23F0;</span>
-        `;
+    const timeDisplay = document.getElementById('timeDisplay');
+    if (timeDisplay) {
+        timeDisplay.innerHTML = '<span>--:-- --</span><span style="font-size: 1.2rem;">&#x23F0;</span>';
+        timeDisplay.classList.remove('active');
     }
     
-    const selectedDate = document.getElementById('selectedDate');
+    const selectedDate = document.getElementById('apptSelectedDate');
     if (selectedDate) selectedDate.value = '';
     
-    const selectedTime = document.getElementById('selectedTime');
+    const selectedTime = document.getElementById('apptSelectedTime');
     if (selectedTime) selectedTime.value = '';
     
-    const bookBtn = document.getElementById('bookBtn');
+    const status = document.getElementById('appointmentStatus');
+    if (status) status.innerHTML = '';
+    
+    const bookBtn = document.getElementById('apptBookBtn');
     if (bookBtn) bookBtn.disabled = true;
 }
 
-// Close modal on outside click
+// Close on outside click
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('appointmentModal');
+    const modal = document.getElementById('appointmentModalOverlay');
     if (modal) {
         modal.addEventListener('click', function(e) {
-            if (e.target === this) closeModal();
+            if (e.target === this) closeAppointmentModal();
         });
     }
     
     // Close on Escape key
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') closeAppointmentModal();
     });
-    
-    // Doctor change handler
-    const doctorSelect = document.getElementById('doctorSelect');
-    if (doctorSelect) {
-        doctorSelect.addEventListener('change', function() {
-            loadWeekView();
-            // Reset time display
-            const timeContainer = document.getElementById('timeContainer');
-            if (timeContainer) {
-                timeContainer.innerHTML = `
-                    <input type="text" id="timeDisplay" value="--:-- --" readonly disabled>
-                    <span class="time-icon">&#x23F0;</span>
-                `;
-            }
-            const selectedDate = document.getElementById('selectedDate');
-            if (selectedDate) selectedDate.value = '';
-            const selectedTime = document.getElementById('selectedTime');
-            if (selectedTime) selectedTime.value = '';
-            checkFormValid();
-        });
-    }
-    
-    // Patient ID input listener
-    const patientId = document.getElementById('patientId');
-    if (patientId) {
-        patientId.addEventListener('input', checkFormValid);
-    }
-    
-    // Initialize book button as disabled
-    const bookBtn = document.getElementById('bookBtn');
-    if (bookBtn) bookBtn.disabled = true;
 });
 
-// ==================== WEEKLY CALENDAR ====================
-function loadWeekView() {
-    const doctorId = document.getElementById('doctorSelect').value;
-    const container = document.getElementById('weekDays');
+// ==================== CALENDAR ====================
+function loadAppointmentCalendar() {
+    const doctorId = document.getElementById('apptDoctorSelect').value;
+    const calendar = document.getElementById('appointmentCalendar');
     
-    if (!container) return;
+    if (!calendar) return;
     
     if (!doctorId) {
-        container.innerHTML = '<p style="color: #718096; text-align: center; padding: 20px;">Select a doctor first</p>';
+        calendar.innerHTML = '<div style="grid-column:span 7; text-align:center; color:#718096; padding:20px;">Select a doctor first</div>';
         return;
     }
     
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    const months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
     let html = '';
     
     for (let i = 0; i < 7; i++) {
@@ -113,9 +83,8 @@ function loadWeekView() {
         const dayNum = date.getDate();
         const fullDate = date.toISOString().split('T')[0];
         
-        // Simulate slot availability
+        // Simulate slots - REPLACE with real API call
         const slots = getSimulatedSlots(fullDate, doctorId);
-        
         const isFull = slots === 0;
         const statusClass = isFull ? 'full' : 'available';
         const statusText = isFull ? 'Full' : `${slots} slots`;
@@ -123,8 +92,7 @@ function loadWeekView() {
         html += `
             <div class="day-card ${statusClass}" 
                  data-date="${fullDate}"
-                 data-slots="${slots}"
-                 ${!isFull ? `onclick="selectDate('${fullDate}', this)"` : ''}>
+                 ${!isFull ? `onclick="selectAppointmentDate('${fullDate}', this)"` : ''}>
                 <div class="day-name">${dayName}</div>
                 <div class="day-date">${month}/${dayNum}</div>
                 <div class="slots">${statusText}</div>
@@ -132,10 +100,9 @@ function loadWeekView() {
         `;
     }
     
-    container.innerHTML = html;
+    calendar.innerHTML = html;
 }
 
-// Simulate slot availability
 function getSimulatedSlots(date, doctorId) {
     const seed = date.split('-').join('') + doctorId;
     let hash = 0;
@@ -147,145 +114,137 @@ function getSimulatedSlots(date, doctorId) {
 }
 
 // ==================== DATE SELECTION ====================
-function selectDate(date, element) {
+function selectAppointmentDate(date, element) {
     // Remove previous selection
-    document.querySelectorAll('.day-card').forEach(d => {
+    document.querySelectorAll('#appointmentCalendar .day-card').forEach(d => {
         d.classList.remove('selected');
     });
     
-    // Add selected class to clicked element
+    // Add selected
     element.classList.add('selected');
     
-    // Update hidden date input
-    const selectedDate = document.getElementById('selectedDate');
+    // Set hidden date
+    const selectedDate = document.getElementById('apptSelectedDate');
     if (selectedDate) selectedDate.value = date;
     
-    // Enable and show time picker
-    const timeContainer = document.getElementById('timeContainer');
-    if (timeContainer) {
-        // Get available times for this date
-        const availableTimes = getAvailableTimes(date);
-        
-        if (availableTimes.length === 0) {
-            timeContainer.innerHTML = `
-                <input type="text" value="No slots available" readonly disabled style="color: #e53e3e;">
-                <span class="time-icon">&#x23F0;</span>
-            `;
-        } else {
-            // Build time slot buttons
-            let timeHtml = '<div class="time-slots-grid">';
-            availableTimes.forEach(time => {
-                timeHtml += `<div class="time-slot" onclick="selectTime('${time}', this)">${time}</div>`;
-            });
-            timeHtml += '</div>';
-            timeContainer.innerHTML = timeHtml;
-        }
+    // Load times
+    loadAppointmentTimes(date);
+    
+    // Update status
+    const status = document.getElementById('appointmentStatus');
+    if (status) {
+        status.innerHTML = `<span style="color:#2d6a4f; font-weight:500;">✓ Date selected: ${date}</span>`;
     }
     
-    checkFormValid();
+    checkAppointmentValid();
 }
 
-// Get available times (simulated)
-function getAvailableTimes(date) {
-    const allTimes = ['09:00 AM', '10:00 AM', '11:00 AM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
-    const seed = date;
+// ==================== TIME SLOTS ====================
+function loadAppointmentTimes(date) {
+    const doctorId = document.getElementById('apptDoctorSelect').value;
+    const container = document.getElementById('timeContainer');
+    
+    const allTimes = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
+    
+    // Simulate - REPLACE with: fetch(`get_available_time.php?doctor_id=${doctorId}&date=${date}`)
+    const available = getSimulatedAvailableTimes(date, doctorId, allTimes);
+    
+    if (available.length === 0) {
+        if (container) {
+            container.innerHTML = `
+                <div class="time-display-box" style="color:#c53030; border-color:#feb2b2;">
+                    <span>No slots available for this date</span>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    let html = '<div class="time-slots-grid">';
+    allTimes.forEach(time => {
+        const isAvailable = available.includes(time);
+        const className = isAvailable ? '' : 'taken';
+        const onclick = isAvailable ? `onclick="selectAppointmentTime('${time}', this)"` : '';
+        
+        html += `<div class="time-slot-btn ${className}" ${onclick}>${time}</div>`;
+    });
+    html += '</div>';
+    
+    if (container) container.innerHTML = html;
+}
+
+function getSimulatedAvailableTimes(date, doctorId, allTimes) {
+    const seed = date + doctorId;
     let hash = 0;
     for (let i = 0; i < seed.length; i++) {
         hash = ((hash << 5) - hash) + seed.charCodeAt(i);
         hash = hash & hash;
     }
-    
-    // Randomly remove 2-4 slots
     const removeCount = 2 + (Math.abs(hash) % 3);
     const taken = new Set();
     for (let i = 0; i < removeCount; i++) {
         taken.add(allTimes[Math.abs((hash + i * 7) % allTimes.length)]);
     }
-    
     return allTimes.filter(t => !taken.has(t));
 }
 
-// ==================== TIME SELECTION ====================
-function selectTime(time, element) {
-    // Remove previous selection
-    document.querySelectorAll('.time-slot').forEach(t => {
+function selectAppointmentTime(time, element) {
+    // Remove previous
+    document.querySelectorAll('.time-slot-btn').forEach(t => {
         t.classList.remove('selected');
     });
     
-    // Add selected class
+    // Add selected
     element.classList.add('selected');
     
-    // Update hidden time input
-    const selectedTime = document.getElementById('selectedTime');
+    // Set hidden time
+    const selectedTime = document.getElementById('apptSelectedTime');
     if (selectedTime) selectedTime.value = time;
     
     // Update display
     const timeDisplay = document.getElementById('timeDisplay');
-    if (timeDisplay) timeDisplay.value = time;
+    if (timeDisplay) {
+        timeDisplay.innerHTML = `<span>${time}</span><span style="font-size: 1.2rem;">&#x23F0;</span>`;
+        timeDisplay.classList.add('active');
+    }
     
-    checkFormValid();
+    // Update status
+    const status = document.getElementById('appointmentStatus');
+    if (status) {
+        status.innerHTML = `<span style="color:#1e6f9f; font-weight:500;">✓ Time selected: ${time}</span>`;
+    }
+    
+    checkAppointmentValid();
 }
 
-// ==================== FORM VALIDATION ====================
-function checkFormValid() {
-    const patientId = document.getElementById('patientId');
-    const doctorId = document.getElementById('doctorSelect');
-    const date = document.getElementById('selectedDate');
-    const time = document.getElementById('selectedTime');
-    const bookBtn = document.getElementById('bookBtn');
+// ==================== VALIDATION ====================
+function checkAppointmentValid() {
+    const patientId = document.getElementById('apptPatientId');
+    const doctorId = document.getElementById('apptDoctorSelect');
+    const date = document.getElementById('apptSelectedDate');
+    const time = document.getElementById('apptSelectedTime');
+    const bookBtn = document.getElementById('apptBookBtn');
     
-    if (!bookBtn) return;
+    if (!bookBtn) return false;
     
-    // Check all required fields
     const hasPatient = patientId && patientId.value.trim() !== '';
     const hasDoctor = doctorId && doctorId.value !== '';
     const hasDate = date && date.value !== '';
     const hasTime = time && time.value !== '';
     
-    console.log('Validation:', { hasPatient, hasDoctor, hasDate, hasTime });
-    console.log('Values:', { 
-        patient: patientId ? patientId.value : 'null', 
-        doctor: doctorId ? doctorId.value : 'null',
-        date: date ? date.value : 'null',
-        time: time ? time.value : 'null'
-    });
-    
     const isValid = hasPatient && hasDoctor && hasDate && hasTime;
-    
     bookBtn.disabled = !isValid;
     
-    if (isValid) {
-        bookBtn.style.opacity = '1';
-        bookBtn.style.cursor = 'pointer';
-    } else {
-        bookBtn.style.opacity = '0.5';
-        bookBtn.style.cursor = 'not-allowed';
+    return isValid;
+}
+
+function validateAppointmentForm() {
+    if (!checkAppointmentValid()) {
+        const status = document.getElementById('appointmentStatus');
+        if (status) {
+            status.innerHTML = `<span style="color:#c53030;">Please fill all required fields</span>`;
+        }
+        return false;
     }
-}
-
-// ==================== TABLE ACTIONS ====================
-function markDone(id) {
-    if (!confirm('Mark this appointment as Completed?')) return;
-    
-    fetch(`mark_appointment_done.php?id=${id}`)
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Failed: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(() => alert('Network error'));
-}
-
-function editAppt(id) {
-    window.location.href = `edit_appointment.php?id=${id}`;
-}
-
-function cancelAppt(id) {
-    if (!confirm('Cancel this appointment?')) return;
-    fetch(`delete_appointment.php?id=${id}`)
-        .then(() => location.reload())
-        .catch(() => alert('Network error'));
+    return true;
 }
