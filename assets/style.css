@@ -117,7 +117,7 @@ nav a.active {
     line-height: 1.2;
 }
 
-/* ========== QUICK ACTIONS - FIXED LAYOUT ========== */
+/* ========== QUICK ACTIONS ========== */
 .quick-actions {
     display: flex;
     gap: 1rem;
@@ -160,25 +160,6 @@ nav a.active {
 .action-btn.primary:hover {
     background: #155d87;
     transform: translateY(-1px);
-}
-
-/* ========== VERIFY PATIENT CARD ========== */
-.card .form-row {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-end;
-    flex-wrap: wrap;
-}
-
-.card .form-row input {
-    flex: 2;
-    min-width: 200px;
-}
-
-.card .form-row .btn {
-    flex: 0 0 auto;
-    padding: 0.6rem 1.2rem;
-    white-space: nowrap;
 }
 
 /* ========== CARDS & FORMS ========== */
@@ -234,6 +215,24 @@ input:focus, select:focus, textarea:focus {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
+}
+
+.card .form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.card .form-row input {
+    flex: 2;
+    min-width: 200px;
+}
+
+.card .form-row .btn {
+    flex: 0 0 auto;
+    padding: 0.6rem 1.2rem;
+    white-space: nowrap;
 }
 
 /* ========== BUTTONS ========== */
@@ -301,7 +300,6 @@ input:focus, select:focus, textarea:focus {
     border-bottom: none;
 }
 
-/* Table action buttons */
 .table td .btn {
     padding: 0.4rem 1rem;
     font-size: 0.75rem;
@@ -455,6 +453,45 @@ input:focus, select:focus, textarea:focus {
     font-weight: 700;
 }
 
+/* ========== WEEKLY CALENDAR ========== */
+.calendar-day {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    text-align: center;
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.calendar-day.available {
+    background-color: #e0f2e9;
+    cursor: pointer;
+}
+
+.calendar-day.available:hover {
+    transform: scale(1.02);
+    background-color: #c8e6d9;
+    border-color: #1e6f9f;
+}
+
+.calendar-day.unavailable {
+    background-color: #fee2e2;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.calendar-day.selected {
+    border: 2px solid #1e6f9f;
+    background-color: #c8e6d9;
+}
+
+#weekly-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .container {
@@ -493,96 +530,9 @@ input:focus, select:focus, textarea:focus {
         display: inline-block;
         margin-bottom: 0.3rem;
     }
-}
-
-/* Weekly calendar day boxes */
-.calendar-day {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
-    text-align: center;
-    transition: 0.2s;
-    cursor: pointer;
-}
-.calendar-day.available {
-    background-color: #e0f2e9;
-    cursor: pointer;
-}
-.calendar-day.available:hover {
-    transform: scale(1.02);
-    background-color: #c8e6d9;
-    border-color: #1e6f9f;
-}
-.calendar-day.unavailable {
-    background-color: #fee2e2;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-.calendar-day.selected {
-    border: 2px solid #1e6f9f;
-    background-color: #c8e6d9;
-}
-#weekly-calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-@media (max-width: 768px) {
     #weekly-calendar {
         grid-template-columns: repeat(2, 1fr);
     }
-}
-
-/* ========== WEEKLY CALENDAR STYLES (moved from dashboard) ========== */
-.calendar-day {
-    padding: 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
-    text-align: center;
-    transition: 0.2s;
-    cursor: pointer;
-}
-.calendar-day.available {
-    background-color: #e0f2e9;
-    cursor: pointer;
-}
-.calendar-day.available:hover {
-    transform: scale(1.02);
-    background-color: #c8e6d9;
-    border-color: #1e6f9f;
-}
-.calendar-day.unavailable {
-    background-color: #fee2e2;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-.calendar-day.selected {
-    border: 2px solid #1e6f9f;
-    background-color: #c8e6d9;
-}
-#weekly-calendar {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-@media (max-width: 768px) {
-    #weekly-calendar {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* ========== MODAL SCROLLING FIX ========== */
-.modal {
-    overflow-y: auto;
-}
-.modal-content {
-    max-height: 90vh;
-    overflow-y: auto;
-    margin: 2rem auto;
-}
-@media (max-width: 768px) {
     .modal-content {
         width: 95%;
         padding: 1rem;

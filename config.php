@@ -49,19 +49,45 @@ function doctorWorksOnDay($pdo, $doctor_id, $date) {
     $stmt = $pdo->prepare("SELECT schedule FROM doctors WHERE doctor_id = ?");
     $stmt->execute([$doctor_id]);
     $schedule = $stmt->fetchColumn();
-    if (!$schedule) return true; // If no schedule is stored, assume any day is allowed
+    if (!$schedule) return true; // no schedule = always available
 
-    $dayOfWeek = date('l', strtotime($date));
-    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    $dayOfWeek = date('l', strtotime($date)); // e.g. "Monday"
+    $scheduleLower = strtolower($schedule);
+    
+    // Expand ranges like "Monday – Wednesday" into individual days
+    $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     $workingDays = [];
     foreach ($days as $day) {
-        if (stripos($schedule, $day) !== false) {
-            $workingDays[] = $day;
+        if (strpos($scheduleLower, $day) !== false) {
+            $workingDays[] = ucfirst($day);
         }
     }
-    return in_array($dayOfWeek, $workingDays);
+    // If we found explicit days, use them
+    if (!empty($workingDays)) {
+        return in_array($dayOfWeek, $workingDays);
+    }
+    
+    // Otherwise, try to parse a range like "Monday – Wednesday"
+    if (preg_match('/([A-Za-z]+)\s*[–-]\s*([A-Za-z]+)/i', $schedule, $matches)) {
+        $start = ucfirst(strtolower($matches[1]));
+        $end   = ucfirst(strtolower($matches[2]));
+        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        $startIndex = array_search($start, $daysOfWeek);
+        $endIndex   = array_search($end, $daysOfWeek);
+        if ($startIndex !== false && $endIndex !== false) {
+            if ($startIndex <= $endIndex) {
+                $range = array_slice($daysOfWeek, $startIndex, $endIndex - $startIndex + 1);
+            } else {
+                // wrap around (e.g., Friday – Monday)
+                $range = array_merge(array_slice($daysOfWeek, $startIndex), array_slice($daysOfWeek, 0, $endIndex + 1));
+            }
+            return in_array($dayOfWeek, $range);
+        }
+    }
+    
+    // If nothing matched, assume available (or you could return false)
+    return true;
 }
-
 // ========== Modified doctorAvailable with day check ==========
 function doctorAvailable($pdo, $doctor_id, $date) {
     // First, check if the doctor works on this day

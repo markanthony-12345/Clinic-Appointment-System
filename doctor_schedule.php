@@ -29,21 +29,6 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
 <head>
     <title>Doctor Schedules & Availability</title>
     <link rel="stylesheet" href="assets/style.css">
-    <style>
-        .doctor-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
-        .add-doctor-form {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: #f8fafc;
-            border-radius: 1rem;
-        }
-    </style>
 </head>
 <body>
 <div class="container">
@@ -55,7 +40,6 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
         <?php echo $message; ?>
 
         <?php foreach ($doctors as $d): 
-            // Count today's appointments
             $stmt = $pdo->prepare("
                 SELECT COUNT(*) 
                 FROM appointments 

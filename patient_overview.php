@@ -9,13 +9,11 @@ $consult_done = $lab_done = $med_done = $pay_done = false;
 $cleared = false;
 
 if ($pid > 0) {
-    // Fetch patient
     $stmt = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
     $stmt->execute([$pid]);
     $pdata = $stmt->fetch();
 
     if ($pdata) {
-        // Payment info
         $stmt = $pdo->prepare("SELECT total_amount, amount_paid, (total_amount - amount_paid) AS balance FROM payments WHERE patient_id = ?");
         $stmt->execute([$pid]);
         $payment_data = $stmt->fetch();
@@ -24,17 +22,14 @@ if ($pid > 0) {
         }
         $pay_done = ($payment_data['balance'] <= 0);
 
-        // Consultation
         $consult = $pdo->prepare("SELECT 1 FROM appointments WHERE patient_id = ? AND status = 'Completed' LIMIT 1");
         $consult->execute([$pid]);
         $consult_done = $consult->rowCount() > 0;
 
-        // Laboratory
         $lab = $pdo->prepare("SELECT 1 FROM laboratory WHERE patient_id = ? AND status = 'Completed' LIMIT 1");
         $lab->execute([$pid]);
         $lab_done = $lab->rowCount() > 0;
 
-        // Medicine
         $med = $pdo->prepare("SELECT 1 FROM medicines WHERE patient_id = ? AND status = 'Taken' LIMIT 1");
         $med->execute([$pid]);
         $med_done = $med->rowCount() > 0;
@@ -52,25 +47,6 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
     <title>Patient Overview – Payment & Clearance</title>
     <link rel="stylesheet" href="assets/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-        }
-        @media (max-width: 768px) {
-            .two-columns { grid-template-columns: 1fr; }
-        }
-        .payment-summary {
-            background: #f8fafc;
-            padding: 1rem;
-            border-radius: 1rem;
-            margin-bottom: 1rem;
-        }
-        .amount { font-size: 1.8rem; font-weight: 700; }
-        .text-success { color: #1e6f3f; }
-        .text-danger { color: #c23d2e; }
-    </style>
 </head>
 <body>
 <div class="container">
@@ -95,11 +71,11 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
         <?php elseif ($pdata): ?>
             <div class="card">
                 <h2><?= htmlspecialchars($pdata['fullname']) ?> (ID: <?= $pid ?>)</h2>
-                <p>Age: <?= $pdata['age'] ?> | Gender: <?= $pdata['gender'] ?> | Contact: <?= htmlspecialchars($pdata['contact_number']) ?></p>
+                <p class="patient-meta">Age: <?= $pdata['age'] ?> | Gender: <?= $pdata['gender'] ?> | Contact: <?= htmlspecialchars($pdata['contact_number']) ?></p>
 
                 <div class="two-columns">
-                    <!-- LEFT COLUMN: PAYMENT SECTION -->
-                    <div>
+                    <!-- Left: Payment -->
+                    <div class="payment-column">
                         <h3><i class="fas fa-money-bill-wave"></i> Payment Status</h3>
                         <div class="payment-summary">
                             <p><strong>Total Bill:</strong> <span class="amount">₱<?= number_format($payment_data['total_amount'], 2) ?></span></p>
@@ -119,29 +95,25 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
                         </div>
                     </div>
 
-                    <!-- RIGHT COLUMN: CLEARANCE CHECKLIST -->
-                    <div>
+                    <!-- Right: Clearance -->
+                    <div class="clearance-column">
                         <h3><i class="fas fa-check-circle"></i> Clearance Checklist</h3>
                         <div class="checklist-section">
                             <div class="checklist-item">
                                 <label>🩺 Consultation Completed</label>
-                                <input type="checkbox" <?= $consult_done ? 'checked' : '' ?>
-                                       onchange="toggleItem('consult', <?= $pid ?>, this.checked)">
+                                <input type="checkbox" <?= $consult_done ? 'checked' : '' ?> onchange="toggleItem('consult', <?= $pid ?>, this.checked)">
                             </div>
                             <div class="checklist-item">
                                 <label>🔬 Laboratory Completed</label>
-                                <input type="checkbox" <?= $lab_done ? 'checked' : '' ?>
-                                       onchange="toggleItem('lab', <?= $pid ?>, this.checked)">
+                                <input type="checkbox" <?= $lab_done ? 'checked' : '' ?> onchange="toggleItem('lab', <?= $pid ?>, this.checked)">
                             </div>
                             <div class="checklist-item">
                                 <label>💊 Medicine Taken</label>
-                                <input type="checkbox" <?= $med_done ? 'checked' : '' ?>
-                                       onchange="toggleItem('medicine', <?= $pid ?>, this.checked)">
+                                <input type="checkbox" <?= $med_done ? 'checked' : '' ?> onchange="toggleItem('medicine', <?= $pid ?>, this.checked)">
                             </div>
                             <div class="checklist-item">
                                 <label>💰 Payment Completed</label>
-                                <input type="checkbox" <?= $pay_done ? 'checked' : '' ?>
-                                       onchange="toggleItem('payment', <?= $pid ?>, this.checked)">
+                                <input type="checkbox" <?= $pay_done ? 'checked' : '' ?> onchange="toggleItem('payment', <?= $pid ?>, this.checked)">
                             </div>
                         </div>
                         <div class="clearance-status">
@@ -159,9 +131,9 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
                     </div>
                 </div>
 
-                <!-- RESET SECTION (Admin only) -->
+                <!-- Admin reset -->
                 <?php if ($is_admin): ?>
-                <div class="reset-section" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eee;">
+                <div class="reset-section">
                     <p class="reset-warning">⚠️ Admin only: Reset all records (appointments, lab, medicine, payment) to default.</p>
                     <button class="btn danger" onclick="resetPatient(<?= $pid ?>, '<?= htmlspecialchars($pdata['fullname']) ?>')">
                         ↩ Reset / Undo All Records
@@ -173,26 +145,17 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
     </main>
 </div>
 
-<!-- Payment Modal (same as before) -->
+<!-- Payment Modal -->
 <div id="paymentModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
         <h3>Record Payment</h3>
         <form action="update_payment.php" method="POST">
             <input type="hidden" name="patient_id" id="modal_patient_id">
-            <div class="form-group">
-                <label>Total Bill: ₱<span id="modal_total"></span></label>
-            </div>
-            <div class="form-group">
-                <label>Already Paid: ₱<span id="modal_paid"></span></label>
-            </div>
-            <div class="form-group">
-                <label>Balance Due: ₱<span id="modal_balance"></span></label>
-            </div>
-            <div class="form-group">
-                <label>Payment Amount</label>
-                <input type="number" name="payment_amount" id="payment_amount" step="0.01" min="0.01" required>
-            </div>
+            <div class="form-group"><label>Total Bill: ₱<span id="modal_total"></span></label></div>
+            <div class="form-group"><label>Already Paid: ₱<span id="modal_paid"></span></label></div>
+            <div class="form-group"><label>Balance Due: ₱<span id="modal_balance"></span></label></div>
+            <div class="form-group"><label>Payment Amount</label><input type="number" name="payment_amount" id="payment_amount" step="0.01" min="0.01" required></div>
             <button type="submit" class="btn primary">Submit Payment</button>
         </form>
     </div>
