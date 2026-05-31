@@ -6,18 +6,18 @@
             <button class="close" onclick="closeModal()">&times;</button>
         </div>
         <div class="modal-body">
-            <form class="appointment-form" id="appointment_process.php" action="save_appointment.php" method="POST">
+            <form class="appointment-form" id="appointmentForm" action="save_appointment.php" method="POST">
                 
                 <!-- Patient ID -->
                 <div class="form-group">
                     <label>Patient ID</label>
-                    <input type="text" name="patient_id" placeholder="Enter Patient ID" required oninput="validateForm()">
+                    <input type="text" name="patient_id" placeholder="Enter Patient ID" required>
                 </div>
                 
                 <!-- Doctor -->
                 <div class="form-group">
                     <label>Doctor</label>
-                    <select name="doctor_id" id="doctorSelect" required>
+                    <select name="doctor_id" id="doctorSelect" required onchange="loadWeekView()">
                         <option value="">Select Doctor</option>
                         <?php foreach ($doctors as $doc): ?>
                         <option value="<?= $doc['doctor_id'] ?>">
@@ -37,12 +37,13 @@
                     <input type="hidden" name="appointment_date" id="selectedDate" required>
                 </div>
                 
-                <!-- Time Input -->
+                <!-- Time Slots -->
                 <div class="form-group">
                     <label>Time</label>
-                    <div class="time-input-wrapper" id="timeContainer">
-                        <input type="time" name="appointment_time" id="timeInput" value="--:-- --" disabled>
-                        <span class="time-icon">&#x23F0;</span>
+                    <div class="time-slots-container" id="timeContainer">
+                        <div class="time-placeholder">
+                            Select a doctor and date first to see available times
+                        </div>
                     </div>
                     <input type="hidden" name="appointment_time" id="selectedTime" required>
                 </div>
@@ -56,7 +57,7 @@
                     </select>
                 </div>
                 
-                <button type="submit" class="btn-book" disabled>Book Appointment</button>
+                <button type="submit" class="btn-book">Book Appointment</button>
             </form>
         </div>
     </div>
