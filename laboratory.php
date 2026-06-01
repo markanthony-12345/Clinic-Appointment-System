@@ -1,8 +1,9 @@
 <?php
 require_once 'config.php';
 requireLogin();
+if ($_SESSION["user_logged"]["role"] !== "Admin") { header("Location: dashboard.php?error=access_denied"); exit; }
 
-// Fetch laboratory records
+//dito fine-Fetch ung laboratory records
 $stmt = $pdo->query("
     SELECT l.*, p.fullname 
     FROM laboratory l 
@@ -105,7 +106,7 @@ $labRecords = $stmt->fetchAll();
     </div>
 
     <script>
-        // Auto-fill patient name when Patient ID is entered
+        // nag auauto-fill ng patient name kapag Patient ID is entered
         document.getElementById('lab_patient_id')?.addEventListener('blur', function() {
             fetch(`get_patient.php?id=${this.value}`)
                 .then(response => response.json())
@@ -114,12 +115,12 @@ $labRecords = $stmt->fetchAll();
                 });
         });
 
-        // Edit lab record
+        // nag eedit ng lab record
         function editLab(id) {
             window.location.href = `edit_lab.php?id=${id}`;
         }
 
-        // Delete lab record with confirmation
+        // eto nag dedelete ng lab record with confirmation
         function deleteLab(id) {
             if (confirm('Delete this record?')) {
                 window.location.href = `delete_lab.php?id=${id}`;

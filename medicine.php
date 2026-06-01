@@ -1,8 +1,9 @@
 <?php
 require_once 'config.php';
 requireLogin();
+if ($_SESSION["user_logged"]["role"] !== "Admin") { header("Location: dashboard.php?error=access_denied"); exit; }
 
-// Fetch medicine records
+//dito fine-Fetch lahat ng medicine records
 $stmt = $pdo->query("
     SELECT m.*, p.fullname 
     FROM medicines m 
@@ -107,7 +108,7 @@ $medicines = $stmt->fetchAll();
     </div>
 
     <script>
-        // Auto-fill patient name when Patient ID is entered
+        // eto nag Auto-fill ng patient name kapag Patient ID is entered
         document.getElementById('med_patient_id')?.addEventListener('blur', function() {
             fetch(`get_patient.php?id=${this.value}`)
                 .then(response => response.json())
@@ -131,7 +132,7 @@ $medicines = $stmt->fetchAll();
                     statusSpan.textContent = 'Taken';
                     statusSpan.className = 'status taken';
 
-                    // Disable the button so it can't be clicked again
+                    // eto dini-disable ung button para hindi maclick ulit
                     const btn = document.getElementById('btn-' + id);
                     btn.disabled = true;
                     btn.style.opacity = '0.5';
