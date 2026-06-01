@@ -1,6 +1,22 @@
 <?php
 require_once 'config.php';
 requireLogin();
+// dito only customers can only view their own record
+if ($_SESSION["user_logged"]["role"] !== "Admin") {
+    $stmt = $pdo->prepare("SELECT patient_id FROM patients WHERE fullname = ? LIMIT 1");
+    $stmt->execute([$_SESSION["user_logged"]["fullname"]]);
+    $ownRecord = $stmt->fetch();
+    $allowedId = $ownRecord ? (int)$ownRecord["patient_id"] : 0;
+    $requestedId = isset($_GET["patient_id"]) ? (int)$_GET["patient_id"] : 0;
+    if ($requestedId && $requestedId !== $allowedId) {
+        header("Location: dashboard.php?error=access_denied");
+        exit;
+    }
+    if (!$requestedId && $allowedId) {
+        header("Location: patient_overview.php?patient_id=" . $allowedId);
+        exit;
+    }
+}
 
 $pid = isset($_GET['patient_id']) ? (int)$_GET['patient_id'] : 0;
 $pdata = null;
