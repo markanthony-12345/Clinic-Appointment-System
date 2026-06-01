@@ -1,11 +1,12 @@
 <?php
 require_once 'config.php';
 requireLogin();
+if ($_SESSION["user_logged"]["role"] !== "Admin") { header("Location: dashboard.php?error=access_denied"); exit; }
 
 $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
 $message = '';
 
-// Handle adding a new doctor (Admin only)
+// eto naghahandle ng mag add ng new doctor (Admin only)
 if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_doctor'])) {
     $doctor_name = sanitize($_POST['doctor_name']);
     $specialization = sanitize($_POST['specialization']);
@@ -21,7 +22,7 @@ if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_doct
     }
 }
 
-// Fetch all doctors
+// eto fineFetch lahat ng doctors
 $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
 ?>
 <!DOCTYPE html>
