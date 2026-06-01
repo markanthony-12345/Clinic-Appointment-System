@@ -345,14 +345,25 @@ if (patientInput && patientInput.type !== 'hidden') {
     patientInput.addEventListener('input', checkBookBtn);
 }
 
-function deletePatient(id, name) {
-    if (!confirm(`DELETE patient "${name}"?\n\nThis cannot be undone!`)) return;
-    fetch(`delete_patient.php?patient_id=${id}`)
-        .then(res => res.json())
+function deletePatient(id) {
+
+    if(confirm("Delete this patient?")) {
+
+        fetch('delete_patient.php?id=' + id)
+        .then(response => response.json())
         .then(data => {
-            if (data.success) { document.getElementById('patient-row-' + id).remove(); alert('Deleted.'); }
-            else alert('Delete failed: ' + (data.message || 'Unknown error'));
-        }).catch(() => alert('Network error.'));
+            alert(data.message);
+
+            if(data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert("Network error");
+            console.error(error);
+        });
+
+    }
 }
 </script>
 </body>
