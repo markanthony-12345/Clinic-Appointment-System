@@ -5,31 +5,44 @@ requireLogin();
 $user = $_SESSION['user_logged'];
 $is_admin = ($user['role'] === 'Admin');
 
-// Stats
-$total_patients       = $pdo->query("SELECT COUNT(*) FROM patients")->fetchColumn();
-$pending_appointments = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Pending'")->fetchColumn();
-$paid_patients        = $pdo->query("SELECT COUNT(*) FROM payments WHERE amount_paid >= total_amount")->fetchColumn();
-
-$cleared_today = $pdo->query("
-    SELECT COUNT(DISTINCT p.patient_id)
-    FROM patients p
-    WHERE
-        EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed' AND DATE(a.appointment_date) = CURDATE())
+// dito ung stats (admin only)
+if ($is_admin) {
+    $total_patients       = $pdo->query("SELECT COUNT(*) FROM patients")->fetchColumn();
+    $pending_appointments = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Pending'")->fetchColumn();
+    $paid_patients        = $pdo->query("SELECT COUNT(*) FROM payments WHERE amount_paid >= total_amount")->fetchColumn();
+    $cleared_today = $pdo->query("
+        SELECT COUNT(DISTINCT p.patient_id) FROM patients p
+        WHERE EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed' AND DATE(a.appointment_date) = CURDATE())
         AND EXISTS (SELECT 1 FROM laboratory l WHERE l.patient_id = p.patient_id AND l.status = 'Completed')
         AND EXISTS (SELECT 1 FROM medicines m WHERE m.patient_id = p.patient_id AND m.status = 'Taken')
         AND EXISTS (SELECT 1 FROM payments py WHERE py.patient_id = p.patient_id AND py.amount_paid >= py.total_amount)
-")->fetchColumn();
+    ")->fetchColumn();
+    $recentPatients = $pdo->query("
+        SELECT p.patient_id, p.fullname, p.age, p.gender, p.date_registered,
+               COALESCE(py.total_amount,0) AS total_amount, COALESCE(py.amount_paid,0) AS amount_paid
+        FROM patients p LEFT JOIN payments py ON p.patient_id = py.patient_id
+        ORDER BY p.date_registered DESC LIMIT 10
+    ")->fetchAll();
+    $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
+} else {
+    // Customer: find their patient record by matching fullname to user fullname
+    $stmt = $pdo->prepare("SELECT p.*, COALESCE(py.total_amount,0) AS total_amount, COALESCE(py.amount_paid,0) AS amount_paid
+        FROM patients p LEFT JOIN payments py ON p.patient_id = py.patient_id
+        WHERE p.fullname = ? LIMIT 1");
+    $stmt->execute([$user['fullname']]);
+    $myRecord = $stmt->fetch();
 
-$recentPatients = $pdo->query("
-    SELECT p.patient_id, p.fullname, p.age, p.gender, p.date_registered,
-           COALESCE(py.total_amount, 0) AS total_amount,
-           COALESCE(py.amount_paid, 0) AS amount_paid
-    FROM patients p
-    LEFT JOIN payments py ON p.patient_id = py.patient_id
-    ORDER BY p.date_registered DESC LIMIT 10
-")->fetchAll();
-
-$doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
+    // Customer appointments
+    $myAppointments = [];
+    if ($myRecord) {
+        $stmt2 = $pdo->prepare("SELECT a.*, d.doctor_name, d.specialization FROM appointments a
+            JOIN doctors d ON a.doctor_id = d.doctor_id
+            WHERE a.patient_id = ? ORDER BY a.appointment_date DESC");
+        $stmt2->execute([$myRecord['patient_id']]);
+        $myAppointments = $stmt2->fetchAll();
+    }
+    $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,28 +51,55 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
     <title>Clinic Dashboard</title>
     <link rel="stylesheet" href="assets/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .calendar-day { border:2px solid #e8eef4; border-radius:12px; padding:0.7rem 0.3rem; text-align:center; cursor:not-allowed; background:#f8f9fb; color:#a0aec0; font-size:0.8rem; transition:all 0.2s; user-select:none; }
+        .calendar-day.available { background:white; color:#1a2c3e; cursor:pointer; border-color:#d5e0eb; }
+        .calendar-day.available:hover { border-color:#1e6f9f; background:#e8f4fc; transform:translateY(-2px); box-shadow:0 6px 16px -6px rgba(30,111,159,0.2); }
+        .calendar-day.selected { border-color:#1e6f9f !important; background:linear-gradient(135deg,#e8f4fc,#d6ecf8) !important; color:#1e6f9f !important; font-weight:700; transform:translateY(-2px); box-shadow:0 6px 16px -6px rgba(30,111,159,0.25); cursor:pointer !important; }
+        .calendar-day small { display:block; font-size:0.7rem; margin-top:2px; color:#38a169; }
+        .calendar-day:not(.available) small { color:#e53e3e; }
+        .calendar-day.selected small { color:#1e6f9f; }
+        .calendar-loading { grid-column:span 7; text-align:center; color:#718096; padding:10px; font-size:0.85rem; }
+        .role-badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+        .role-badge.admin { background:#fef3c7; color:#b45309; }
+        .role-badge.user { background:#e0f2fe; color:#0369a1; }
+        .my-status-card { background:linear-gradient(135deg,#e8f4fc,#f0f9ff); border:1.5px solid #bdd4e6; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; }
+        .status-row { display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid #e8eff6; }
+        .status-row:last-child { border-bottom:none; }
+    </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <div>Welcome, <?= htmlspecialchars($user['fullname']) ?> (<?= $user['role'] ?>) | <a href="logout.php">Logout</a></div>
+        <div>
+            Welcome, <?= htmlspecialchars($user['fullname']) ?>
+            <span class="role-badge <?= $is_admin ? 'admin' : 'user' ?>"><?= $user['role'] ?></span>
+            | <a href="logout.php">Logout</a>
+        </div>
         <nav>
             <a href="dashboard.php" class="active">Dashboard</a>
-            <a href="doctor_schedule.php">Doctors</a>
-            <a href="laboratory.php">Laboratory</a>
-            <a href="patient_overview.php">Payment & Clearance</a>
-            <a href="medicine.php">Medicines</a>
             <?php if ($is_admin): ?>
+                <a href="doctor_schedule.php">Doctors</a>
+                <a href="laboratory.php">Laboratory</a>
+                <a href="patient_overview.php">Payment & Clearance</a>
+                <a href="medicine.php">Medicines</a>
                 <a href="xml_export.php">XML Export</a>
                 <a href="xml_import.php">XML Import</a>
+            <?php else: ?>
+                <a href="#appointment-form">Book Appointment</a>
+                <?php if (isset($myRecord) && $myRecord): ?>
+                    <a href="patient_overview.php?patient_id=<?= $myRecord['patient_id'] ?>">My Status</a>
+                <?php endif; ?>
             <?php endif; ?>
         </nav>
     </header>
     <main>
         <?php if (isset($_GET['success'])): ?>
-            <div class="alert success">Success!</div>
+            <div class="alert success">✅ Done!</div>
         <?php endif; ?>
 
+        <?php if ($is_admin): ?>
+        <!-- ===================== ADMIN VIEW ===================== -->
         <div class="dashboard-stats">
             <div class="stat-card"><h3><i class="fas fa-users"></i> Total Patients</h3><span class="stat-number"><?= $total_patients ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-calendar-times"></i> Pending Appointments</h3><span class="stat-number"><?= $pending_appointments ?></span></div>
@@ -69,10 +109,11 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
 
         <div class="quick-actions">
             <a href="#patient-form" class="action-btn primary"><i class="fas fa-user-plus"></i> Register Patient</a>
-            <!-- FIXED: Button opens appointment modal -->
-            <button type="button" class="action-btn" onclick="openAppointmentModal()">
-                <i class="fas fa-calendar-plus"></i> New Appointment
-            </button>
+            <a href="#appointment-form" class="action-btn"><i class="fas fa-calendar-plus"></i> New Appointment</a>
+            <a href="doctor_schedule.php" class="action-btn"><i class="fas fa-user-md"></i> Doctor Schedules</a>
+            <a href="laboratory.php" class="action-btn"><i class="fas fa-vial"></i> Laboratory</a>
+            <a href="medicine.php" class="action-btn"><i class="fas fa-pills"></i> Medicines</a>
+            <a href="patient_overview.php" class="action-btn"><i class="fas fa-file-invoice-dollar"></i> Payment & Clearance</a>
         </div>
 
         <div class="card">
@@ -88,35 +129,94 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
         <div class="card">
             <h3>Recent Patients</h3>
             <table class="table">
-                <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Registered</th><th>Payment Status</th><th>Action</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>Gender</th><th>Registered</th><th>Payment</th><th>Action</th></tr></thead>
                 <tbody>
                 <?php foreach ($recentPatients as $row):
-                    if ($row['amount_paid'] <= 0) { $statusClass = 'unpaid'; $statusText = 'Unpaid'; }
-                    elseif ($row['amount_paid'] >= $row['total_amount']) { $statusClass = 'paid'; $statusText = 'Paid'; }
-                    else { $statusClass = 'partial'; $statusText = 'Partial'; }
+                    if ($row['amount_paid'] <= 0) { $sc = 'unpaid'; $st = 'Unpaid'; }
+                    elseif ($row['amount_paid'] >= $row['total_amount']) { $sc = 'paid'; $st = 'Paid'; }
+                    else { $sc = 'partial'; $st = 'Partial'; }
                 ?>
-                    <tr id="patient-row-<?= $row['patient_id'] ?>">
-                        <td><?= $row['patient_id'] ?></td>
-                        <td><?= htmlspecialchars($row['fullname']) ?></td>
-                        <td><?= $row['age'] ?></td>
-                        <td><?= $row['gender'] ?></td>
-                        <td><?= date('M j', strtotime($row['date_registered'])) ?></td>
-                        <td><span class="status <?= $statusClass ?>"><?= $statusText ?></span></td>
-                        <td>
-                            <a href="patient_overview.php?patient_id=<?= $row['patient_id'] ?>" class="btn primary">View</a>
-                            <?php if ($is_admin): ?>
-                                <button class="btn delete-btn" onclick="deletePatient(<?= $row['patient_id'] ?>, '<?= htmlspecialchars($row['fullname'], ENT_QUOTES) ?>')">🗑 Delete</button>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
+                <tr id="patient-row-<?= $row['patient_id'] ?>">
+                    <td><?= $row['patient_id'] ?></td>
+                    <td><?= htmlspecialchars($row['fullname']) ?></td>
+                    <td><?= $row['age'] ?></td>
+                    <td><?= $row['gender'] ?></td>
+                    <td><?= date('M j', strtotime($row['date_registered'])) ?></td>
+                    <td><span class="status <?= $sc ?>"><?= $st ?></span></td>
+                    <td>
+                        <a href="patient_overview.php?patient_id=<?= $row['patient_id'] ?>" class="btn primary">View</a>
+                        <button class="btn delete-btn" onclick="deletePatient(<?= $row['patient_id'] ?>, '<?= htmlspecialchars($row['fullname'], ENT_QUOTES) ?>')">🗑 Delete</button>
+                    </td>
+                </tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
+
+        <?php else: ?>
+        <!-- ===================== CUSTOMER VIEW ===================== -->
+        <?php if (!isset($myRecord) || !$myRecord): ?>
+            <div class="card" style="text-align:center; padding:3rem;">
+                <h3 style="color:#1e6f9f;">👋 Welcome, <?= htmlspecialchars($user['fullname']) ?>!</h3>
+                <p style="color:#718096; margin:1rem 0;">Your patient record has not been created yet. Please visit the clinic or contact the admin to register you as a patient.</p>
+                <p style="color:#a0aec0; font-size:0.85rem;">Once registered, you can view your appointments, lab results, and clearance status here.</p>
+            </div>
+        <?php else: ?>
+            <!-- My Summary Card -->
+            <div class="my-status-card">
+                <h3 style="color:#1e4a6e; margin-bottom:1rem;"><i class="fas fa-id-card"></i> My Clinic Status</h3>
+                <div class="status-row">
+                    <span>Patient ID</span>
+                    <strong>#<?= $myRecord['patient_id'] ?></strong>
+                </div>
+                <div class="status-row">
+                    <span>Total Bill</span>
+                    <strong>₱<?= number_format($myRecord['total_amount'], 2) ?></strong>
+                </div>
+                <div class="status-row">
+                    <span>Amount Paid</span>
+                    <strong style="color:#1e6f3f;">₱<?= number_format($myRecord['amount_paid'], 2) ?></strong>
+                </div>
+                <div class="status-row">
+                    <span>Balance</span>
+                    <?php $bal = $myRecord['total_amount'] - $myRecord['amount_paid']; ?>
+                    <strong style="color:<?= $bal <= 0 ? '#1e6f3f' : '#c0392b' ?>;">₱<?= number_format($bal, 2) ?></strong>
+                </div>
+                <div style="margin-top:1rem;">
+                    <a href="patient_overview.php?patient_id=<?= $myRecord['patient_id'] ?>" class="btn primary">
+                        <i class="fas fa-eye"></i> View Full Status & Clearance
+                    </a>
+                </div>
+            </div>
+
+            <!-- My Appointments -->
+            <div class="card">
+                <h3><i class="fas fa-calendar-check"></i> My Appointments</h3>
+                <?php if (empty($myAppointments)): ?>
+                    <p style="color:#718096;">No appointments yet. <a href="#appointment-form" style="color:#1e6f9f;">Book one now →</a></p>
+                <?php else: ?>
+                <table class="table">
+                    <thead><tr><th>Doctor</th><th>Specialization</th><th>Date & Time</th><th>Status</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($myAppointments as $appt): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($appt['doctor_name']) ?></td>
+                        <td><?= htmlspecialchars($appt['specialization']) ?></td>
+                        <td><?= date('M j, Y g:i A', strtotime($appt['appointment_date'])) ?></td>
+                        <td><span class="status <?= strtolower($appt['status']) ?>"><?= $appt['status'] ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+        <?php endif; ?>
     </main>
 </div>
 
-<!-- Register Patient Modal (existing) -->
+<?php if ($is_admin): ?>
+<!-- Register Patient Modal (Admin only) -->
 <div id="patient-form" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -133,312 +233,126 @@ $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
         </form>
     </div>
 </div>
+<?php endif; ?>
 
-<!-- NEW: Appointment Modal -->
-<div id="appointmentModal" class="modal-overlay">
-    <div class="modal-panel">
-        <div class="modal-panel-header">
-            <h2>New Appointment – Weekly View</h2>
-            <button class="modal-close-btn" onclick="closeAppointmentModal()">&times;</button>
-        </div>
-        <div class="modal-panel-body">
-            <form id="appointmentForm" action="appointment_process.php" method="POST" onsubmit="return validateAppointmentForm()">
-                
-                <!-- Patient ID -->
-                <div class="form-group">
-                    <label>Patient ID</label>
-                    <input type="number" name="patient_id" id="apptPatientId" placeholder="Enter Patient ID" required oninput="checkAppointmentValid()">
+<!-- Appointment Modal (Both Admin and Customer) -->
+<div id="appointment-form" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>New Appointment – Weekly View</h2>
+        <form action="appointment_process.php" method="POST" id="apptForm">
+            <?php if ($is_admin): ?>
+            <div class="form-group">
+                <label>Patient ID</label>
+                <input type="number" name="patient_id" id="appt_patient_id" required>
+            </div>
+            <?php else: ?>
+            <!-- Customer: auto-fill their own patient ID -->
+            <input type="hidden" name="patient_id" id="appt_patient_id" value="<?= isset($myRecord) && $myRecord ? $myRecord['patient_id'] : '' ?>">
+            <?php if (!isset($myRecord) || !$myRecord): ?>
+                <div class="alert error">You are not registered as a patient yet. Please contact the clinic admin.</div>
+            <?php endif; ?>
+            <?php endif; ?>
+
+            <div class="form-group">
+                <label>Doctor</label>
+                <select name="doctor_id" id="weekly_doctor_select" required onchange="loadWeeklyCalendar()">
+                    <option value="">Select Doctor</option>
+                    <?php foreach ($doctors as $d): ?>
+                        <option value="<?= $d['doctor_id'] ?>"><?= htmlspecialchars($d['doctor_name']) ?> (<?= htmlspecialchars($d['specialization']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Select Date (Next 7 days)</label>
+                <div id="weekly-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:0.5rem;margin-top:0.5rem;">
+                    <div class="calendar-loading">Select a doctor first</div>
                 </div>
-                
-                <!-- Doctor -->
-                <div class="form-group">
-                    <label>Doctor</label>
-                    <select name="doctor_id" id="apptDoctorSelect" required onchange="loadAppointmentCalendar()">
-                        <option value="">Select Doctor</option>
-                        <?php foreach ($doctors as $d): ?>
-                            <option value="<?= $d['doctor_id'] ?>"><?= htmlspecialchars($d['doctor_name']) ?> (<?= htmlspecialchars($d['specialization']) ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <!-- Weekly Calendar -->
-                <div class="form-group">
-                    <label>Select Date (Next 7 days)</label>
-                    <div class="weekly-calendar-grid" id="appointmentCalendar">
-                        <!-- JS generates day cards here -->
-                    </div>
-                    <input type="hidden" name="appointment_date" id="apptSelectedDate" required>
-                </div>
-                
-                <!-- Time -->
-                <div class="form-group">
-                    <label>Time</label>
-                    <div id="timeContainer">
-                        <div class="time-display-box" id="timeDisplay">
-                            <span>--:-- --</span>
-                            <span style="font-size: 1.2rem;">&#x23F0;</span>
-                        </div>
-                    </div>
-                    <input type="hidden" name="appointment_time" id="apptSelectedTime" required>
-                </div>
-                
-                <!-- Lab Required -->
-                <div class="form-group">
-                    <label>Lab Required?</label>
-                    <select name="laboratory_required">
-                        <option value="No">No</option>
-                        <option value="Yes">Yes</option>
-                    </select>
-                </div>
-                
-                <div id="appointmentStatus"></div>
-                
-                <button type="submit" class="btn-book-appointment" id="apptBookBtn" disabled>Book Appointment</button>
-            </form>
-        </div>
+                <input type="hidden" name="appointment_date" id="selected_date">
+            </div>
+            <div class="form-group">
+                <label>Time</label>
+                <input type="time" name="appointment_time" id="appt_time" required onchange="checkBookBtn()">
+            </div>
+            <div class="form-group">
+                <label>Lab Required?</label>
+                <select name="laboratory_required"><option>No</option><option>Yes</option></select>
+            </div>
+            <div id="availability-status" style="margin:8px 0;font-size:0.9rem;"></div>
+            <button type="submit" class="btn primary" id="weekly-book-btn" disabled style="width:100%;padding:0.9rem;font-size:1rem;">Book Appointment</button>
+        </form>
     </div>
 </div>
 
 <script src="assets/script.js"></script>
 <script>
-// ==================== APPOINTMENT MODAL ====================
-function openAppointmentModal() {
-    const modal = document.getElementById('appointmentModal');
-    if (modal) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        resetAppointmentForm();
-    }
-}
-
-function closeAppointmentModal() {
-    const modal = document.getElementById('appointmentModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-        resetAppointmentForm();
-    }
-}
-
-function resetAppointmentForm() {
-    const form = document.getElementById('appointmentForm');
-    if (form) form.reset();
-    
-    const calendar = document.getElementById('appointmentCalendar');
-    if (calendar) calendar.innerHTML = '';
-    
-    const timeDisplay = document.getElementById('timeDisplay');
-    if (timeDisplay) {
-        timeDisplay.innerHTML = '<span>--:-- --</span><span style="font-size: 1.2rem;">&#x23F0;</span>';
-        timeDisplay.classList.remove('active');
-    }
-    
-    document.getElementById('apptSelectedDate').value = '';
-    document.getElementById('apptSelectedTime').value = '';
-    document.getElementById('appointmentStatus').innerHTML = '';
-    
-    const bookBtn = document.getElementById('apptBookBtn');
-    if (bookBtn) bookBtn.disabled = true;
-}
-
-// Close on outside click
-document.getElementById('appointmentModal').addEventListener('click', function(e) {
-    if (e.target === this) closeAppointmentModal();
-});
-
-// Close on Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeAppointmentModal();
-});
-
-// ==================== CALENDAR ====================
-function loadAppointmentCalendar() {
-    const doctorId = document.getElementById('apptDoctorSelect').value;
-    const calendar = document.getElementById('appointmentCalendar');
-    
-    if (!calendar) return;
-    
+function loadWeeklyCalendar() {
+    const doctorId = document.getElementById('weekly_doctor_select').value;
+    const calendarDiv = document.getElementById('weekly-calendar');
+    document.getElementById('selected_date').value = '';
+    document.getElementById('availability-status').innerHTML = '';
+    checkBookBtn();
     if (!doctorId) {
-        calendar.innerHTML = '<div style="grid-column:span 7; text-align:center; color:#718096; padding:20px;">Select a doctor first</div>';
+        calendarDiv.innerHTML = '<div class="calendar-loading">Select a doctor first</div>';
         return;
     }
-    
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['1','2','3','4','5','6','7','8','9','10','11','12'];
-    let html = '';
-    
+    calendarDiv.innerHTML = '<div class="calendar-loading">⏳ Checking availability...</div>';
+    const days = [];
     for (let i = 0; i < 7; i++) {
-        const date = new Date();
-        date.setDate(date.getDate() + i);
-        
-        const dayName = days[date.getDay()];
-        const month = months[date.getMonth()];
-        const dayNum = date.getDate();
-        const fullDate = date.toISOString().split('T')[0];
-        
-        // Get slots from server
-        const slots = getSimulatedSlots(fullDate, doctorId);
-        const isFull = slots === 0;
-        const statusClass = isFull ? 'full' : 'available';
-        const statusText = isFull ? 'Full' : `${slots} slots`;
-        
-        html += `
-            <div class="day-card ${statusClass}" 
-                 data-date="${fullDate}"
-                 ${!isFull ? `onclick="selectAppointmentDate('${fullDate}', this)"` : ''}>
-                <div class="day-name">${dayName}</div>
-                <div class="day-date">${month}/${dayNum}</div>
-                <div class="slots">${statusText}</div>
-            </div>
-        `;
+        let d = new Date(); d.setDate(d.getDate() + i); days.push(d);
     }
-    
-    calendar.innerHTML = html;
-}
-
-function getSimulatedSlots(date, doctorId) {
-    const seed = date.split('-').join('') + doctorId;
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash = hash & hash;
-    }
-    return Math.abs(hash % 12);
-}
-
-// ==================== DATE SELECTION ====================
-function selectAppointmentDate(date, element) {
-    // Remove previous selection
-    document.querySelectorAll('#appointmentCalendar .day-card').forEach(d => {
-        d.classList.remove('selected');
+    Promise.all(days.map(day => {
+        const dateStr = day.toISOString().split('T')[0];
+        return fetch(`check_availability.php?doctor_id=${doctorId}&date=${dateStr}`)
+            .then(res => res.json())
+            .then(data => ({ dateStr, day, available: data.available, remaining: data.remaining }))
+            .catch(() => ({ dateStr, day, available: false, remaining: 0 }));
+    })).then(results => {
+        calendarDiv.innerHTML = '';
+        results.forEach(r => {
+            const dayName = r.day.toLocaleDateString('en-US', { weekday: 'short' });
+            const displayDate = `${r.day.getMonth()+1}/${r.day.getDate()}`;
+            const box = document.createElement('div');
+            box.className = `calendar-day ${r.available ? 'available' : 'unavailable'}`;
+            box.dataset.date = r.dateStr;
+            box.innerHTML = `<strong>${dayName}</strong><br>${displayDate}<br><small>${r.available ? r.remaining+' slots' : 'Full'}</small>`;
+            if (r.available) {
+                box.addEventListener('click', function() {
+                    document.querySelectorAll('#weekly-calendar .calendar-day').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    document.getElementById('selected_date').value = this.dataset.date;
+                    document.getElementById('availability-status').innerHTML = `<span style="color:green;">✅ Selected: ${this.dataset.date}. Now choose time.</span>`;
+                    checkBookBtn();
+                });
+            }
+            calendarDiv.appendChild(box);
+        });
+    }).catch(() => {
+        calendarDiv.innerHTML = '<div class="calendar-loading" style="color:red;">Error loading calendar.</div>';
     });
-    
-    // Add selected
-    element.classList.add('selected');
-    
-    // Set hidden date
-    document.getElementById('apptSelectedDate').value = date;
-    
-    // Load times
-    loadAppointmentTimes(date);
-    
-    // Update status
-    document.getElementById('appointmentStatus').innerHTML = 
-        `<span style="color:#2d6a4f; font-weight:500;">✓ Date selected: ${date}</span>`;
-    
-    checkAppointmentValid();
 }
 
-// ==================== TIME SLOTS ====================
-function loadAppointmentTimes(date) {
-    const doctorId = document.getElementById('apptDoctorSelect').value;
-    const container = document.getElementById('timeContainer');
-    
-    const allTimes = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
-    
-    // Simulate available times (replace with: fetch(`get_available_time.php?doctor_id=${doctorId}&date=${date}`))
-    const available = getSimulatedAvailableTimes(date, doctorId, allTimes);
-    
-    if (available.length === 0) {
-        container.innerHTML = `
-            <div class="time-display-box" style="color:#c53030; border-color:#feb2b2;">
-                <span>No slots available for this date</span>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '<div class="time-slots-grid">';
-    allTimes.forEach(time => {
-        const isAvailable = available.includes(time);
-        const className = isAvailable ? '' : 'taken';
-        const onclick = isAvailable ? `onclick="selectAppointmentTime('${time}', this)"` : '';
-        
-        html += `<div class="time-slot-btn ${className}" ${onclick}>${time}</div>`;
-    });
-    html += '</div>';
-    
-    container.innerHTML = html;
+function checkBookBtn() {
+    const date = document.getElementById('selected_date').value;
+    const time = document.getElementById('appt_time').value;
+    const patientId = document.getElementById('appt_patient_id').value;
+    const doctor = document.getElementById('weekly_doctor_select').value;
+    document.getElementById('weekly-book-btn').disabled = !(date && time && patientId && doctor);
 }
 
-function getSimulatedAvailableTimes(date, doctorId, allTimes) {
-    const seed = date + doctorId;
-    let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-        hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-        hash = hash & hash;
-    }
-    const removeCount = 2 + (Math.abs(hash) % 3);
-    const taken = new Set();
-    for (let i = 0; i < removeCount; i++) {
-        taken.add(allTimes[Math.abs((hash + i * 7) % allTimes.length)]);
-    }
-    return allTimes.filter(t => !taken.has(t));
+const patientInput = document.getElementById('appt_patient_id');
+if (patientInput && patientInput.type !== 'hidden') {
+    patientInput.addEventListener('input', checkBookBtn);
 }
 
-function selectAppointmentTime(time, element) {
-    // Remove previous
-    document.querySelectorAll('.time-slot-btn').forEach(t => {
-        t.classList.remove('selected');
-    });
-    
-    // Add selected
-    element.classList.add('selected');
-    
-    // Set hidden time
-    document.getElementById('apptSelectedTime').value = time;
-    
-    // Update display
-    const timeDisplay = document.getElementById('timeDisplay');
-    if (timeDisplay) {
-        timeDisplay.innerHTML = `<span>${time}</span><span style="font-size: 1.2rem;">&#x23F0;</span>`;
-        timeDisplay.classList.add('active');
-    }
-    
-    // Update status
-    document.getElementById('appointmentStatus').innerHTML = 
-        `<span style="color:#1e6f9f; font-weight:500;">✓ Time selected: ${time}</span>`;
-    
-    checkAppointmentValid();
-}
-
-// ==================== VALIDATION ====================
-function checkAppointmentValid() {
-    const patientId = document.getElementById('apptPatientId').value.trim();
-    const doctorId = document.getElementById('apptDoctorSelect').value;
-    const date = document.getElementById('apptSelectedDate').value;
-    const time = document.getElementById('apptSelectedTime').value;
-    const bookBtn = document.getElementById('apptBookBtn');
-    
-    const isValid = patientId && doctorId && date && time;
-    bookBtn.disabled = !isValid;
-    
-    return isValid;
-}
-
-function validateAppointmentForm() {
-    if (!checkAppointmentValid()) {
-        document.getElementById('appointmentStatus').innerHTML = 
-            `<span style="color:#c53030;">Please fill all required fields</span>`;
-        return false;
-    }
-    return true;
-}
-
-// ==================== EXISTING FUNCTIONS ====================
 function deletePatient(id, name) {
-    if (!confirm(`DELETE patient "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`DELETE patient "${name}"?\n\nThis cannot be undone!`)) return;
     fetch(`delete_patient.php?patient_id=${id}`)
         .then(res => res.json())
         .then(data => {
-            if (data.success) {
-                document.getElementById('patient-row-' + id).remove();
-                alert('Patient deleted successfully.');
-            } else {
-                alert('Delete failed: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(() => alert('Network error.'));
+            if (data.success) { document.getElementById('patient-row-' + id).remove(); alert('Deleted.'); }
+            else alert('Delete failed: ' + (data.message || 'Unknown error'));
+        }).catch(() => alert('Network error.'));
 }
 </script>
 </body>
