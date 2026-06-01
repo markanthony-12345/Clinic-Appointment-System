@@ -1,0 +1,17 @@
+# ============================================================
+# CLINIC APPOINTMENT SYSTEM - DEVELOPER HTACCESS
+# ============================================================
+
+# 1. Iwasan na makita ng mga members ang listahan ng files sa browser
+Options -Indexes
+
+# 2. I-block lang ang mga database backup para hindi manakaw ang SQL file
+<FilesMatch "\.(sql|log|env|git)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 3. I-allow ang standard rewrite logic ng XAMPP
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+</IfModule>
