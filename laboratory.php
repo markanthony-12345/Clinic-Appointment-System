@@ -81,25 +81,25 @@ $labRecords = $stmt->fetchAll();
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($labRecords as $row): ?>
-                            <tr>
-                                <td><?= $row['lab_id'] ?></td>
-                                <td><?= htmlspecialchars($row['fullname']) ?></td>
-                                <td><?= $row['laboratory_type'] ?></td>
-                                <td>
-                                    <span class="status <?= strtolower(str_replace(' ', '-', $row['status'])) ?>">
-                                        <?= $row['status'] ?>
-                                    </span>
-                                </td>
-                                <td><?= htmlspecialchars($row['result']) ?></td>
-                                <td><?= $row['created_at'] ?></td>
-                                <td>
-                                    <button class="btn" onclick="editLab(<?= $row['lab_id'] ?>)">Edit</button>
-                                    <button class="btn danger" onclick="deleteLab(<?= $row['lab_id'] ?>)">Delete</button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
+    <?php foreach ($labRecords as $row): ?>
+        <tr>
+            <td><?= $row['lab_id'] ?></td>
+            <td><?= htmlspecialchars($row['fullname'] ?? '') ?></td>
+            <td><?= htmlspecialchars($row['laboratory_type'] ?? '') ?></td>
+            <td>
+                <span class="status <?= strtolower(str_replace(' ', '-', $row['status'] ?? '')) ?>">
+                    <?= htmlspecialchars($row['status'] ?? '') ?>
+                </span>
+            </td>
+            <td><?= htmlspecialchars($row['result'] ?? '') ?></td>
+            <td><?= $row['created_at'] ?></td>
+            <td>
+                <button class="btn" onclick="editLab(<?= $row['lab_id'] ?>)">Edit</button>
+                <button class="btn danger" onclick="deleteLab(<?= $row['lab_id'] ?>)">Delete</button>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+</tbody>
                 </table>
             </div>
         </main>
