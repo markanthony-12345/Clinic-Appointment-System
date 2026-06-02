@@ -24,6 +24,7 @@ if ($is_admin) {
     ")->fetchAll();
     $doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
 } else {
+    // Customer: find patient by fullname (exact match)
     $stmt = $pdo->prepare("SELECT p.*, COALESCE(py.total_amount,0) AS total_amount, COALESCE(py.amount_paid,0) AS amount_paid
         FROM patients p LEFT JOIN payments py ON p.patient_id = py.patient_id
         WHERE p.fullname = ? LIMIT 1");
@@ -66,9 +67,12 @@ if ($is_admin) {
                 <a href="xml_export.php">XML Export</a>
                 <a href="xml_import.php">XML Import</a>
             <?php else: ?>
-                <a href="#appointment-form">Book Appointment</a>
-                <?php if (isset($myRecord) && $myRecord): ?>
+                <?php if ($myRecord): ?>
+                    <a href="#appointment-form">Book Appointment</a>
                     <a href="patient_overview.php?patient_id=<?= $myRecord['patient_id'] ?>">My Status</a>
+                <?php else: ?>
+                    <span style="color:#aaa; cursor:not-allowed;" title="You need a patient record first">Book Appointment</span>
+                    <span style="color:#aaa; cursor:not-allowed;">My Status</span>
                 <?php endif; ?>
             <?php endif; ?>
         </nav>
@@ -82,21 +86,17 @@ if ($is_admin) {
         <?php endif; ?>
 
         <?php if ($is_admin): ?>
-        <!-- STATS -->
+        <!-- ADMIN VIEW (unchanged) -->
         <div class="dashboard-stats">
             <div class="stat-card"><h3><i class="fas fa-users"></i> Total Patients</h3><span class="stat-number"><?= $total_patients ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-calendar-times"></i> Pending Appointments</h3><span class="stat-number"><?= $pending_appointments ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-check-circle"></i> Cleared Today</h3><span class="stat-number"><?= $cleared_today ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-dollar-sign"></i> Paid Patients</h3><span class="stat-number"><?= $paid_patients ?></span></div>
         </div>
-
-        <!-- QUICK ACTIONS (only two main actions) -->
         <div class="quick-actions">
             <a href="#patient-form" class="action-btn primary"><i class="fas fa-user-plus"></i> Register Patient</a>
             <a href="#appointment-form" class="action-btn primary"><i class="fas fa-calendar-plus"></i> New Appointment</a>
         </div>
-
-        <!-- SEARCH -->
         <div class="card">
             <h3><i class="fas fa-search"></i> Verify Patient Record</h3>
             <form method="GET" action="patient_overview.php">
@@ -106,8 +106,6 @@ if ($is_admin) {
                 </div>
             </form>
         </div>
-
-        <!-- RECENT PATIENTS TABLE -->
         <div class="card">
             <h3>Recent Patients</h3>
             <table class="table">
@@ -137,11 +135,18 @@ if ($is_admin) {
         </div>
 
         <?php else: ?>
-        <!-- CUSTOMER VIEW (unchanged) -->
-        <?php if (!isset($myRecord) || !$myRecord): ?>
-            <div class="card" style="text-align:center; padding:3rem;">
-                <h3 style="color:#1e6f9f;">👋 Welcome, <?= htmlspecialchars($user['fullname']) ?>!</h3>
-                <p style="color:#718096; margin:1rem 0;">Your patient record has not been created yet. Please visit the clinic or contact the admin to register you as a patient.</p>
+        <!-- CUSTOMER VIEW (fixed) -->
+        <?php if (!$myRecord): ?>
+            <div class="alert error" style="margin-bottom:1rem;">
+                <strong>⚠️ Patient record missing</strong><br>
+                Your user account "<?= htmlspecialchars($user['fullname']) ?>" is not linked to any patient record.<br>
+                Please ask the clinic administrator to register you as a patient using the <strong>exact same name</strong>.
+            </div>
+            <div class="card" style="text-align:center; padding:2rem;">
+                <i class="fas fa-user-slash" style="font-size:3rem; color:#c0392b; margin-bottom:1rem;"></i>
+                <h3>No Patient Record Found</h3>
+                <p>You cannot book appointments or view your medical status until an admin creates a patient record for you.</p>
+                <p style="margin-top:1rem;">Contact the clinic administrator with your full name: <strong><?= htmlspecialchars($user['fullname']) ?></strong></p>
             </div>
         <?php else: ?>
             <div class="my-status-card">
@@ -160,7 +165,12 @@ if ($is_admin) {
                 <table class="table">
                     <thead><tr><th>Doctor</th><th>Specialization</th><th>Date & Time</th><th>Status</th></tr></thead>
                     <tbody><?php foreach ($myAppointments as $appt): ?>
-                    <tr><td><?= htmlspecialchars($appt['doctor_name']) ?></td><td><?= htmlspecialchars($appt['specialization']) ?></td><td><?= date('M j, Y g:i A', strtotime($appt['appointment_date'])) ?></td><td><span class="status <?= strtolower($appt['status']) ?>"><?= $appt['status'] ?></span></td></tr>
+                    <tr>
+                        <td><?= htmlspecialchars($appt['doctor_name']) ?></td>
+                        <td><?= htmlspecialchars($appt['specialization']) ?></td>
+                        <td><?= date('M j, Y g:i A', strtotime($appt['appointment_date'])) ?></td>
+                        <td><span class="status <?= strtolower($appt['status']) ?>"><?= $appt['status'] ?></span></td>
+                    </tr>
                     <?php endforeach; ?></tbody>
                 </table>
                 <?php endif; ?>
@@ -171,7 +181,7 @@ if ($is_admin) {
 </div>
 
 <?php if ($is_admin): ?>
-<!-- Register Patient Modal -->
+<!-- Register Patient Modal (Admin only) -->
 <div id="patient-form" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -201,7 +211,12 @@ if ($is_admin) {
                 <div id="patient_name_display" style="margin-top:5px; font-size:0.75rem; color:#2c7a47;"></div>
             </div>
             <?php else: ?>
-                <input type="hidden" name="patient_id" id="patient_id_input" value="<?= $myRecord['patient_id'] ?? '' ?>">
+                <?php if ($myRecord): ?>
+                    <input type="hidden" name="patient_id" id="patient_id_input" value="<?= $myRecord['patient_id'] ?>">
+                <?php else: ?>
+                    <input type="hidden" name="patient_id" id="patient_id_input" value="">
+                    <div class="alert error" style="margin-bottom:1rem;">You are not registered as a patient. Please contact admin.</div>
+                <?php endif; ?>
             <?php endif; ?>
             <div class="form-group">
                 <label>Doctor</label>
@@ -258,7 +273,7 @@ window.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) e.target.style.display = 'none';
 });
 
-// Patient name auto-fill
+// Patient name auto-fill (admin only)
 const patientInput = document.getElementById('patient_id_input');
 if (patientInput && patientInput.type !== 'hidden') {
     patientInput.addEventListener('blur', function() {
@@ -345,10 +360,11 @@ function checkBookButton() {
     if (bookBtn) bookBtn.disabled = !(patientId && doctor && date && time && time !== '');
 }
 
-patientInput?.addEventListener('input', checkBookButton);
-doctorSelect?.addEventListener('change', checkBookButton);
-dateInput?.addEventListener('change', checkBookButton);
-timeSelect?.addEventListener('change', checkBookButton);
+// Add event listeners only if elements exist
+if (patientInput) patientInput.addEventListener('input', checkBookButton);
+if (doctorSelect) doctorSelect.addEventListener('change', checkBookButton);
+if (dateInput) dateInput.addEventListener('change', checkBookButton);
+if (timeSelect) timeSelect.addEventListener('change', checkBookButton);
 
 function deletePatient(id, name) {
     if (!confirm(`DELETE patient "${name}"? This cannot be undone!`)) return;
