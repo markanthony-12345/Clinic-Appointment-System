@@ -1,5 +1,4 @@
 <?php
-<<<<<<< HEAD
 require_once 'config.php';
 requireLogin();
 

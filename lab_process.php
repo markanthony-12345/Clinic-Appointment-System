@@ -3,7 +3,6 @@ require_once 'config.php';
 requireLogin();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-<<<<<<< HEAD
     $patient_id = $_POST['patient_id'];
     $lab_type = $_POST['laboratory_type'];
     $status = $_POST['status'];
@@ -41,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     header("Location: laboratory.php?success=1");
     exit;
-=======
+}
     file_put_contents('debug.log', print_r($_POST, true), FILE_APPEND);
     // ... rest of code
 }
