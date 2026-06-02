@@ -145,6 +145,7 @@ if ($is_admin) {
                     <td><span class="status <?= $sc ?>"><?= $st ?></span></td>
                     <td>
                         <a href="patient_overview.php?patient_id=<?= $row['patient_id'] ?>" class="btn primary">View</a>
+                        <a href="edit_patient.php?id=<?= $row['patient_id'] ?>" class="btn" style="background:#e0f2fe;color:#0369a1;">✏️ Edit</a>
                         <button class="btn delete-btn" onclick="deletePatient(<?= $row['patient_id'] ?>, '<?= htmlspecialchars($row['fullname'], ENT_QUOTES) ?>')">🗑 Delete</button>
                     </td>
                 </tr>
