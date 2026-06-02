@@ -121,7 +121,7 @@ $labRecords = $stmt->fetchAll();
         </tr>
     <?php endforeach; ?>
 </tbody>
->>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
+
                 </table>
             </div>
         </main>
