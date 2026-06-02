@@ -145,6 +145,10 @@ if ($is_admin) {
                     <td><span class="status <?= $sc ?>"><?= $st ?></span></td>
                     <td>
                         <a href="patient_overview.php?patient_id=<?= $row['patient_id'] ?>" class="btn primary">View</a>
+<<<<<<< HEAD
+=======
+                        <a href="edit_patient.php?id=<?= $row['patient_id'] ?>" class="btn" style="background:#e0f2fe;color:#0369a1;">✏️ Edit</a>
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
                         <button class="btn delete-btn" onclick="deletePatient(<?= $row['patient_id'] ?>, '<?= htmlspecialchars($row['fullname'], ENT_QUOTES) ?>')">🗑 Delete</button>
                     </td>
                 </tr>
@@ -345,6 +349,7 @@ if (patientInput && patientInput.type !== 'hidden') {
     patientInput.addEventListener('input', checkBookBtn);
 }
 
+<<<<<<< HEAD
 function deletePatient(id, name) {
     if (!confirm(`DELETE patient "${name}"?\n\nThis cannot be undone!`)) return;
     fetch(`delete_patient.php?patient_id=${id}`)
@@ -353,6 +358,27 @@ function deletePatient(id, name) {
             if (data.success) { document.getElementById('patient-row-' + id).remove(); alert('Deleted.'); }
             else alert('Delete failed: ' + (data.message || 'Unknown error'));
         }).catch(() => alert('Network error.'));
+=======
+function deletePatient(id) {
+
+    if(confirm("Delete this patient?")) {
+
+        fetch('delete_patient.php?id=' + id)
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+
+            if(data.success) {
+                location.reload();
+            }
+        })
+        .catch(error => {
+            alert("Network error");
+            console.error(error);
+        });
+
+    }
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 }
 </script>
 </body>

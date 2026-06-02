@@ -98,6 +98,13 @@ $medicines = $stmt->fetchAll();
                                         <?= $m['status'] === 'Taken' ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : '' ?>>
                                         ✓ Mark Taken
                                     </button>
+<<<<<<< HEAD
+=======
+                                    <button class="btn delete-btn" id="del-btn-<?= $m['medicine_id'] ?>"
+                                        onclick="deleteMedicine(<?= $m['medicine_id'] ?>, '<?= htmlspecialchars($m['medicine_name'], ENT_QUOTES) ?>')">
+                                        🗑 Delete
+                                    </button>
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -117,6 +124,25 @@ $medicines = $stmt->fetchAll();
                 });
         });
 
+<<<<<<< HEAD
+=======
+        // Delete a medicine record
+        function deleteMedicine(id, name) {
+            if (!confirm(`Delete medicine "${name}"? This cannot be undone.`)) return;
+            fetch(`delete_medicine.php?id=${id}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const row = document.getElementById('row-' + id);
+                        if (row) row.remove();
+                    } else {
+                        alert('Failed to delete: ' + data.message);
+                    }
+                })
+                .catch(() => alert('Network error. Please try again.'));
+        }
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
         // Mark medicine as taken
         function markTaken(id) {
             fetch(`update_medicine_status.php?id=${id}&status=Taken`, {

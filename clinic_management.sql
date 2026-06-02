@@ -1,8 +1,38 @@
+<<<<<<< HEAD
+=======
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: May 31, 2026 at 11:10 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
 
+<<<<<<< HEAD
+=======
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `clinic_management`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `appointments`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `appointments` (
   `appointment_id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
@@ -13,10 +43,26 @@ CREATE TABLE `appointments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
+=======
+--
+-- Dumping data for table `appointments`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 INSERT INTO `appointments` (`appointment_id`, `patient_id`, `doctor_id`, `appointment_date`, `status`, `lab_required`, `created_at`) VALUES
 (1, 1, 1, '2026-06-01 09:30:00', 'Pending', 'No', '2026-05-31 08:23:43'),
 (2, 1, 3, '2026-06-05 09:03:00', 'Pending', 'No', '2026-05-31 08:24:11');
 
+<<<<<<< HEAD
+=======
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `doctors`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `doctors` (
   `doctor_id` int(11) NOT NULL,
   `doctor_name` varchar(100) NOT NULL,
@@ -25,11 +71,27 @@ CREATE TABLE `doctors` (
   `max_patients` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
+=======
+--
+-- Dumping data for table `doctors`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 INSERT INTO `doctors` (`doctor_id`, `doctor_name`, `specialization`, `schedule`, `max_patients`) VALUES
 (1, 'Dr. Maria Santos', 'General Physician', 'Monday – Wednesday 8:00 AM – 2:00 PM', 15),
 (2, 'Dr. John Reyes', 'Cardiologist', 'Tuesday – Thursday 1:00 PM – 7:00 PM', 10),
 (3, 'Dr. Angela Cruz', 'Radiologist', 'Friday – Saturday 9:00 AM – 5:00 PM', 12);
 
+<<<<<<< HEAD
+=======
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `laboratory`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `laboratory` (
   `lab_id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
@@ -39,11 +101,27 @@ CREATE TABLE `laboratory` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
+=======
+--
+-- Dumping data for table `laboratory`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 INSERT INTO `laboratory` (`lab_id`, `patient_id`, `laboratory_type`, `status`, `result`, `created_at`) VALUES
 (1, 1, 'X-ray', 'Completed', 'goods', '2026-05-31 06:07:06'),
 (2, 1, 'From Appointment', 'Not Yet Taken', NULL, '2026-05-31 08:23:43'),
 (3, 1, 'From Appointment', 'Not Yet Taken', NULL, '2026-05-31 08:24:11');
 
+<<<<<<< HEAD
+=======
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `medicines`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `medicines` (
   `medicine_id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
@@ -55,6 +133,15 @@ CREATE TABLE `medicines` (
   `prescription_date` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
+=======
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patients`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `patients` (
   `patient_id` int(11) NOT NULL,
   `fullname` varchar(100) NOT NULL,
@@ -65,9 +152,25 @@ CREATE TABLE `patients` (
   `date_registered` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
 INSERT INTO `patients` (`patient_id`, `fullname`, `age`, `gender`, `address`, `contact_number`, `date_registered`) VALUES
 (1, 'juan dela cruz', 19, 'Male', 'bacoor', '090909090909', '2026-05-31 06:05:18');
 
+=======
+--
+-- Dumping data for table `patients`
+--
+
+INSERT INTO `patients` (`patient_id`, `fullname`, `age`, `gender`, `address`, `contact_number`, `date_registered`) VALUES
+(1, 'juan dela cruz', 19, 'Male', 'bacoor', '090909090909', '2026-05-31 06:05:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payments`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `payments` (
   `payment_id` int(11) NOT NULL,
   `patient_id` int(11) NOT NULL,
@@ -79,9 +182,25 @@ CREATE TABLE `payments` (
   `payment_date` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
 INSERT INTO `payments` (`payment_id`, `patient_id`, `consultation_fee`, `laboratory_fee`, `amount_paid`, `payment_status`, `payment_date`) VALUES
 (1, 1, 500.00, 300.00, 0.00, 'Unpaid', '2026-05-31 06:05:18');
 
+=======
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `patient_id`, `consultation_fee`, `laboratory_fee`, `amount_paid`, `payment_status`, `payment_date`) VALUES
+(1, 1, 500.00, 300.00, 0.00, 'Unpaid', '2026-05-31 06:05:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
@@ -91,37 +210,91 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+<<<<<<< HEAD
+=======
+--
+-- Dumping data for table `users`
+--
+
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 INSERT INTO `users` (`user_id`, `username`, `password`, `fullname`, `role`, `created_at`) VALUES
 (1, 'admin', '$2y$10$SsDy4qm6BU9iWULXzq4ysOtu01ku5voUIdBJCx8dPlmuUnb2nqCzi', 'luigi andrei gordevilla', 'Admin', '2026-05-31 06:03:04'),
 (2, 'customer', '$2y$10$qZAJ7MVvVSdgqyA0ok/k1.ypbSkAYSYtg2peCL/.y7AI.KJyKP4wW', 'juan dela cruz', 'User', '2026-05-31 06:03:41');
 
+<<<<<<< HEAD
+=======
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `appointments`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `appointments`
   ADD PRIMARY KEY (`appointment_id`),
   ADD KEY `patient_id` (`patient_id`),
   ADD KEY `doctor_id` (`doctor_id`);
 
+<<<<<<< HEAD
 ALTER TABLE `doctors`
   ADD PRIMARY KEY (`doctor_id`);
 
+=======
+--
+-- Indexes for table `doctors`
+--
+ALTER TABLE `doctors`
+  ADD PRIMARY KEY (`doctor_id`);
+
+--
+-- Indexes for table `laboratory`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `laboratory`
   ADD PRIMARY KEY (`lab_id`),
   ADD KEY `patient_id` (`patient_id`);
 
+<<<<<<< HEAD
+=======
+--
+-- Indexes for table `medicines`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `medicines`
   ADD PRIMARY KEY (`medicine_id`),
   ADD KEY `fk_medicine_patient` (`patient_id`);
 
+<<<<<<< HEAD
 ALTER TABLE `patients`
   ADD PRIMARY KEY (`patient_id`);
 
+=======
+--
+-- Indexes for table `patients`
+--
+ALTER TABLE `patients`
+  ADD PRIMARY KEY (`patient_id`);
+
+--
+-- Indexes for table `payments`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`payment_id`),
   ADD KEY `patient_id` (`patient_id`);
 
+<<<<<<< HEAD
+=======
+--
+-- Indexes for table `users`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `username` (`username`);
 
+<<<<<<< HEAD
 ALTER TABLE `appointments`
   MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
@@ -144,10 +317,66 @@ ALTER TABLE `payments`
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
+=======
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `appointments`
+--
+ALTER TABLE `appointments`
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `doctors`
+--
+ALTER TABLE `doctors`
+  MODIFY `doctor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `laboratory`
+--
+ALTER TABLE `laboratory`
+  MODIFY `lab_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `medicines`
+--
+ALTER TABLE `medicines`
+  MODIFY `medicine_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `patients`
+--
+ALTER TABLE `patients`
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `appointments`
+--
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
 ALTER TABLE `appointments`
   ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`),
   ADD CONSTRAINT `appointments_ibfk_2` FOREIGN KEY (`doctor_id`) REFERENCES `doctors` (`doctor_id`);
 
+<<<<<<< HEAD
 ALTER TABLE `laboratory`
   ADD CONSTRAINT `laboratory_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
@@ -157,3 +386,27 @@ ALTER TABLE `medicines`
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 COMMIT;
+=======
+--
+-- Constraints for table `laboratory`
+--
+ALTER TABLE `laboratory`
+  ADD CONSTRAINT `laboratory_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `medicines`
+--
+ALTER TABLE `medicines`
+  ADD CONSTRAINT `fk_medicine_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+>>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
