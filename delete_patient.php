@@ -3,6 +3,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once 'config.php';
+requireAdmin(); // Tanging Admin lang ang pwedeng mag-delete ng patient
 
 header('Content-Type: application/json');
 
@@ -47,4 +48,3 @@ try {
 
 }
 ?>
-
