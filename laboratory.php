@@ -81,7 +81,7 @@ $labRecords = $stmt->fetchAll();
                         </tr>
                     </thead>
                     <tbody>
-<<<<<<< HEAD
+
                         <?php foreach ($labRecords as $row): ?>
                             <tr>
                                 <td><?= $row['lab_id'] ?></td>
@@ -101,7 +101,7 @@ $labRecords = $stmt->fetchAll();
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
-=======
+
     <?php foreach ($labRecords as $row): ?>
         <tr>
             <td><?= $row['lab_id'] ?></td>
