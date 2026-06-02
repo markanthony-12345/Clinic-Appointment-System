@@ -61,3 +61,25 @@ Array
     [status] => Not Yet Taken
     [result] => 
 )
+Array
+(
+    [patient_id] => 3
+    [laboratory_type] => X-ray
+    [status] => Completed
+    [result] => geh
+
+)
+Array
+(
+    [patient_id] => 3
+    [laboratory_type] => X-ray
+    [status] => Not Yet Taken
+    [result] => 
+)
+Array
+(
+    [patient_id] => 3
+    [laboratory_type] => Ultrasound
+    [status] => Completed
+    [result] => goods
+)
