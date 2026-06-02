@@ -3,6 +3,11 @@ require_once 'config.php';
 requireLogin();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    file_put_contents('debug.log', print_r($_POST, true), FILE_APPEND);
+    // ... rest of code
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $patient_id = $_POST['patient_id'] ?? null;
     $lab_type = $_POST['laboratory_type'] ?? '';
     $status = $_POST['status'] ?? '';
