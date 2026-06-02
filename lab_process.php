@@ -116,6 +116,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header("Location: laboratory.php?error=database");
         exit;
     }
->>>>>>> e47bb6c16c358686372866dd16fcde1ea2f9833b
+    
 }
 ?>
