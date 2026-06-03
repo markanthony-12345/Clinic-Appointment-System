@@ -1,10 +1,18 @@
 <?php
 require_once 'config.php';
 header('Content-Type: application/json');
-if (isset($_GET['doctor_id']) && isset($_GET['date'])) {
-    $result = doctorAvailable($pdo, $_GET['doctor_id'], $_GET['date']);
-    echo json_encode($result);
-} else {
-    echo json_encode(['available' => false, 'message' => 'Missing parameters']);
+
+$doctor_id = (int)($_GET['doctor_id'] ?? 0);
+$date = $_GET['date'] ?? '';
+
+if (!$doctor_id || !$date) {
+    echo json_encode(['available' => false, 'remaining' => 0]);
+    exit;
 }
+
+$result = doctorAvailable($pdo, $doctor_id, $date);
+echo json_encode([
+    'available' => $result['available'],
+    'remaining' => $result['remaining']
+]);
 ?>
