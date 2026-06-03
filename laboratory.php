@@ -67,8 +67,7 @@ $labRecords = $stmt->fetchAll();
                 <button type="submit" class="btn primary">Save</button>
             </form>
         </div>
-
-<<<<<<< HEAD
+        
             <!-- Laboratory Records Table -->
             <div class="card">
                 <h3>Lab Records</h3>
