@@ -65,7 +65,6 @@ if ($is_admin) {
             <?php if ($is_admin): ?>
                 <a href="doctor_schedule.php">Doctor Schedules</a>
                 <a href="laboratory.php">Laboratory</a>
-                <a href="patient_overview.php">Payment & Clearance</a>
                 <a href="medicine.php">Medicines</a>
                 <a href="xml_export.php">XML Export</a>
                 <a href="xml_import.php">XML Import</a>
