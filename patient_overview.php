@@ -1,7 +1,8 @@
 <?php
 require_once 'config.php';
 requireLogin();
-// dito only customers can only view their own record
+
+// Restrict customers to their own record only
 if ($_SESSION["user_logged"]["role"] !== "Admin") {
     $stmt = $pdo->prepare("SELECT patient_id FROM patients WHERE fullname = ? LIMIT 1");
     $stmt->execute([$_SESSION["user_logged"]["fullname"]]);
@@ -23,13 +24,18 @@ $pdata = null;
 $payment_data = null;
 $consult_done = $lab_done = $med_done = $pay_done = false;
 $cleared = false;
+$appointments = [];
+$medicines = [];
+$lab_records = [];
 
 if ($pid > 0) {
+    // Patient details
     $stmt = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
     $stmt->execute([$pid]);
     $pdata = $stmt->fetch();
 
     if ($pdata) {
+        // Payment info
         $stmt = $pdo->prepare("SELECT total_amount, amount_paid, (total_amount - amount_paid) AS balance FROM payments WHERE patient_id = ?");
         $stmt->execute([$pid]);
         $payment_data = $stmt->fetch();
@@ -38,6 +44,7 @@ if ($pid > 0) {
         }
         $pay_done = ($payment_data['balance'] <= 0);
 
+        // Clearance checks
         $consult = $pdo->prepare("SELECT 1 FROM appointments WHERE patient_id = ? AND status = 'Completed' LIMIT 1");
         $consult->execute([$pid]);
         $consult_done = $consult->rowCount() > 0;
@@ -51,6 +58,27 @@ if ($pid > 0) {
         $med_done = $med->rowCount() > 0;
 
         $cleared = $consult_done && $lab_done && $med_done && $pay_done;
+
+        // Appointments
+        $stmt = $pdo->prepare("
+            SELECT a.*, d.doctor_name 
+            FROM appointments a 
+            JOIN doctors d ON a.doctor_id = d.doctor_id 
+            WHERE a.patient_id = ? 
+            ORDER BY a.appointment_date DESC
+        ");
+        $stmt->execute([$pid]);
+        $appointments = $stmt->fetchAll();
+
+        // Medicines
+        $stmt = $pdo->prepare("SELECT * FROM medicines WHERE patient_id = ? ORDER BY prescription_date DESC");
+        $stmt->execute([$pid]);
+        $medicines = $stmt->fetchAll();
+
+        // Laboratory records
+        $stmt = $pdo->prepare("SELECT * FROM laboratory WHERE patient_id = ? ORDER BY created_at DESC");
+        $stmt->execute([$pid]);
+        $lab_records = $stmt->fetchAll();
     }
 }
 
@@ -60,77 +88,97 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Patient Overview – Payment & Clearance</title>
+    <title>My Medical Record</title>
     <link rel="stylesheet" href="assets/style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .details-section { margin-top: 2rem; }
+        .details-section h3 { margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e2e8f0; }
+        .grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 768px) { .grid-2col { grid-template-columns: 1fr; } }
+        .info-card { background: #f8fafc; padding: 1rem; border-radius: 12px; margin-bottom: 1rem; }
+        .info-card p { margin: 0.3rem 0; }
+        .label { font-weight: 600; color: #2c5f8a; }
+    </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <h1><i class="fas fa-file-invoice-dollar"></i> Patient Overview</h1>
+        <h1><i class="fas fa-file-invoice-dollar"></i> My Medical Record</h1>
         <a href="dashboard.php" class="btn primary">← Back to Dashboard</a>
     </header>
     <main>
-        <!-- Search -->
-        <div class="card">
-            <h3>Search Patient</h3>
-            <form method="GET">
-                <div class="form-row">
-                    <input type="number" name="patient_id" placeholder="Enter Patient ID" value="<?= $pid ?: '' ?>" required>
-                    <button type="submit" class="btn primary">Load Patient</button>
-                </div>
-            </form>
-        </div>
-
         <?php if ($pid > 0 && !$pdata): ?>
             <div class="alert error">Patient not found</div>
         <?php elseif ($pdata): ?>
+            <!-- Basic Info -->
             <div class="card">
                 <h2><?= htmlspecialchars($pdata['fullname']) ?> (ID: <?= $pid ?>)</h2>
                 <p class="patient-meta">Age: <?= $pdata['age'] ?> | Gender: <?= $pdata['gender'] ?> | Contact: <?= htmlspecialchars($pdata['contact_number']) ?></p>
 
-                <div class="two-columns">
-                    <!-- Left: Payment -->
+                <div class="grid-2col">
+                    <!-- Payment Column -->
                     <div class="payment-column">
                         <h3><i class="fas fa-money-bill-wave"></i> Payment Status</h3>
                         <div class="payment-summary">
-                            <p><strong>Total Bill:</strong> <span class="amount">₱<?= number_format($payment_data['total_amount'], 2) ?></span></p>
+                            <p><strong>Total Bill:</strong> ₱<?= number_format($payment_data['total_amount'], 2) ?></p>
                             <p><strong>Amount Paid:</strong> ₱<?= number_format($payment_data['amount_paid'], 2) ?></p>
                             <p><strong>Balance Due:</strong> 
                                 <span class="<?= $pay_done ? 'text-success' : 'text-danger' ?>">
                                     ₱<?= number_format($payment_data['balance'], 2) ?>
                                 </span>
                             </p>
-                            <?php if ($payment_data['balance'] > 0): ?>
+                            <?php if ($is_admin && $payment_data['balance'] > 0): ?>
                                 <button class="btn primary" onclick="openPaymentModal(<?= $pid ?>, <?= $payment_data['total_amount'] ?>, <?= $payment_data['amount_paid'] ?>)">
                                     <i class="fas fa-plus-circle"></i> Add Payment
                                 </button>
-                            <?php else: ?>
+                            <?php elseif ($pay_done): ?>
                                 <span class="status paid">Fully Paid ✓</span>
                             <?php endif; ?>
                         </div>
                     </div>
 
-                    <!-- Right: Clearance -->
+                    <!-- Clearance Column -->
                     <div class="clearance-column">
-                        <h3><i class="fas fa-check-circle"></i> Clearance Checklist</h3>
+                        <h3><i class="fas fa-check-circle"></i> Clearance Status</h3>
                         <div class="checklist-section">
-                            <div class="checklist-item">
-                                <label>🩺 Consultation Completed</label>
-                                <input type="checkbox" <?= $consult_done ? 'checked' : '' ?> onchange="toggleItem('consult', <?= $pid ?>, this.checked)">
-                            </div>
-                            <div class="checklist-item">
-                                <label>🔬 Laboratory Completed</label>
-                                <input type="checkbox" <?= $lab_done ? 'checked' : '' ?> onchange="toggleItem('lab', <?= $pid ?>, this.checked)">
-                            </div>
-                            <div class="checklist-item">
-                                <label>💊 Medicine Taken</label>
-                                <input type="checkbox" <?= $med_done ? 'checked' : '' ?> onchange="toggleItem('medicine', <?= $pid ?>, this.checked)">
-                            </div>
-                            <div class="checklist-item">
-                                <label>💰 Payment Completed</label>
-                                <input type="checkbox" <?= $pay_done ? 'checked' : '' ?> onchange="toggleItem('payment', <?= $pid ?>, this.checked)">
-                            </div>
+                            <?php if ($is_admin): ?>
+                                <!-- Admin toggles -->
+                                <div class="checklist-item">
+                                    <label>🩺 Consultation Completed</label>
+                                    <input type="checkbox" <?= $consult_done ? 'checked' : '' ?> onchange="toggleItem('consult', <?= $pid ?>, this.checked)">
+                                </div>
+                                <div class="checklist-item">
+                                    <label>🔬 Laboratory Completed</label>
+                                    <input type="checkbox" <?= $lab_done ? 'checked' : '' ?> onchange="toggleItem('lab', <?= $pid ?>, this.checked)">
+                                </div>
+                                <div class="checklist-item">
+                                    <label>💊 Medicine Taken</label>
+                                    <input type="checkbox" <?= $med_done ? 'checked' : '' ?> onchange="toggleItem('medicine', <?= $pid ?>, this.checked)">
+                                </div>
+                                <div class="checklist-item">
+                                    <label>💰 Payment Completed</label>
+                                    <input type="checkbox" <?= $pay_done ? 'checked' : '' ?> onchange="toggleItem('payment', <?= $pid ?>, this.checked)">
+                                </div>
+                            <?php else: ?>
+                                <!-- Patient view only -->
+                                <div class="checklist-item">
+                                    <label>🩺 Consultation Completed</label>
+                                    <span class="status <?= $consult_done ? 'completed' : 'pending' ?>"><?= $consult_done ? 'Yes' : 'No' ?></span>
+                                </div>
+                                <div class="checklist-item">
+                                    <label>🔬 Laboratory Completed</label>
+                                    <span class="status <?= $lab_done ? 'completed' : 'pending' ?>"><?= $lab_done ? 'Yes' : 'No' ?></span>
+                                </div>
+                                <div class="checklist-item">
+                                    <label>💊 Medicine Taken</label>
+                                    <span class="status <?= $med_done ? 'completed' : 'pending' ?>"><?= $med_done ? 'Yes' : 'No' ?></span>
+                                </div>
+                                <div class="checklist-item">
+                                    <label>💰 Payment Completed</label>
+                                    <span class="status <?= $pay_done ? 'completed' : 'pending' ?>"><?= $pay_done ? 'Yes' : 'No' ?></span>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="clearance-status">
                             <h4>Final Status:
@@ -146,22 +194,93 @@ $is_admin = ($_SESSION['user_logged']['role'] === 'Admin');
                         </div>
                     </div>
                 </div>
-
-                <!-- Admin reset -->
-                <?php if ($is_admin): ?>
-                <div class="reset-section">
-                    <p class="reset-warning">⚠️ Admin only: Reset all records (appointments, lab, medicine, payment) to default.</p>
-                    <button class="btn danger" onclick="resetPatient(<?= $pid ?>, '<?= htmlspecialchars($pdata['fullname']) ?>')">
-                        ↩ Reset / Undo All Records
-                    </button>
-                </div>
-                <?php endif; ?>
             </div>
+
+            <!-- Appointments, Medicines, Lab Results -->
+            <div class="details-section">
+                <div class="grid-2col">
+                    <!-- Appointments -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-calendar-alt"></i> Appointments</h3>
+                        <?php if (empty($appointments)): ?>
+                            <p>No appointments found.</p>
+                        <?php else: ?>
+                            <table class="table" style="width:100%;">
+                                <thead><tr><th>Date & Time</th><th>Doctor</th><th>Status</th></tr></thead>
+                                <tbody>
+                                <?php foreach ($appointments as $appt): ?>
+                                    <tr>
+                                        <td><?= date('M j, Y g:i A', strtotime($appt['appointment_date'])) ?></td>
+                                        <td><?= htmlspecialchars($appt['doctor_name']) ?></td>
+                                        <td><span class="status <?= strtolower($appt['status']) ?>"><?= $appt['status'] ?></span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Medicines -->
+                    <div class="info-card">
+                        <h3><i class="fas fa-pills"></i> Medicines</h3>
+                        <?php if (empty($medicines)): ?>
+                            <p>No medicines prescribed.</p>
+                        <?php else: ?>
+                            <table class="table" style="width:100%;">
+                                <thead><tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Status</th><th>Prescribed</th></tr></thead>
+                                <tbody>
+                                <?php foreach ($medicines as $med): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($med['medicine_name']) ?></td>
+                                        <td><?= htmlspecialchars($med['dosage']) ?></td>
+                                        <td><?= htmlspecialchars($med['frequency']) ?></td>
+                                        <td><span class="status <?= strtolower($med['status']) == 'taken' ? 'taken' : 'pending' ?>"><?= $med['status'] ?></span></td>
+                                        <td><?= date('M j, Y', strtotime($med['prescription_date'])) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Laboratory Results -->
+                <div class="info-card" style="margin-top:1rem;">
+                    <h3><i class="fas fa-microscope"></i> Laboratory Results</h3>
+                    <?php if (empty($lab_records)): ?>
+                        <p>No laboratory records found.</p>
+                    <?php else: ?>
+                        <table class="table" style="width:100%;">
+                            <thead><tr><th>Test Type</th><th>Status</th><th>Result</th><th>Date</th></tr></thead>
+                            <tbody>
+                            <?php foreach ($lab_records as $lab): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($lab['laboratory_type']) ?></td>
+                                    <td><span class="status <?= strtolower(str_replace(' ', '-', $lab['status'])) ?>"><?= $lab['status'] ?></span></td>
+                                    <td><?= htmlspecialchars($lab['result'] ?: '—') ?></td>
+                                    <td><?= date('M j, Y', strtotime($lab['created_at'])) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Admin Reset Section (only visible to admin) -->
+            <?php if ($is_admin): ?>
+            <div class="reset-section" style="margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eee;">
+                <p class="reset-warning">⚠️ Admin only: Reset all records (appointments, lab, medicine, payment) to default.</p>
+                <button class="btn danger" onclick="resetPatient(<?= $pid ?>, '<?= htmlspecialchars($pdata['fullname']) ?>')">
+                    ↩ Reset / Undo All Records
+                </button>
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
     </main>
 </div>
 
-<!-- Payment Modal -->
+<!-- Payment Modal (for admin only, but safe) -->
 <div id="paymentModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
@@ -185,12 +304,13 @@ function openPaymentModal(patientId, total, paid) {
     document.getElementById('modal_paid').innerText = paid.toFixed(2);
     document.getElementById('modal_balance').innerText = balance.toFixed(2);
     document.getElementById('payment_amount').max = balance;
-    document.getElementById('paymentModal').style.display = 'block';
+    document.getElementById('paymentModal').style.display = 'flex';
 }
 document.querySelector('#paymentModal .close').onclick = () => document.getElementById('paymentModal').style.display = 'none';
 window.onclick = (e) => { if (e.target == document.getElementById('paymentModal')) document.getElementById('paymentModal').style.display = 'none'; };
 
 function toggleItem(type, patientId, checked) {
+    if (!confirm("Are you sure you want to change clearance status?")) return;
     fetch(`update_clearance_item.php?type=${type}&patient_id=${patientId}&value=${checked}`)
         .then(res => res.json())
         .then(data => { if (data.success) location.reload(); else alert("Update failed: " + (data.message || "Unknown error")); });

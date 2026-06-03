@@ -9,13 +9,16 @@ if ($is_admin) {
     $total_patients       = $pdo->query("SELECT COUNT(*) FROM patients")->fetchColumn();
     $pending_appointments = $pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Pending'")->fetchColumn();
     $paid_patients        = $pdo->query("SELECT COUNT(*) FROM payments WHERE amount_paid >= total_amount")->fetchColumn();
-    $cleared_today = $pdo->query("
+    
+    // Count all cleared patients (not just today)
+    $cleared_patients = $pdo->query("
         SELECT COUNT(DISTINCT p.patient_id) FROM patients p
-        WHERE EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed' AND DATE(a.appointment_date) = CURDATE())
+        WHERE EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed')
         AND EXISTS (SELECT 1 FROM laboratory l WHERE l.patient_id = p.patient_id AND l.status = 'Completed')
         AND EXISTS (SELECT 1 FROM medicines m WHERE m.patient_id = p.patient_id AND m.status = 'Taken')
         AND EXISTS (SELECT 1 FROM payments py WHERE py.patient_id = p.patient_id AND py.amount_paid >= py.total_amount)
     ")->fetchColumn();
+    
     $recentPatients = $pdo->query("
         SELECT p.patient_id, p.fullname, p.age, p.gender, p.date_registered,
                COALESCE(py.total_amount,0) AS total_amount, COALESCE(py.amount_paid,0) AS amount_paid
@@ -86,11 +89,11 @@ if ($is_admin) {
         <?php endif; ?>
 
         <?php if ($is_admin): ?>
-        <!-- ADMIN VIEW (unchanged) -->
+        <!-- ADMIN VIEW -->
         <div class="dashboard-stats">
             <div class="stat-card"><h3><i class="fas fa-users"></i> Total Patients</h3><span class="stat-number"><?= $total_patients ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-calendar-times"></i> Pending Appointments</h3><span class="stat-number"><?= $pending_appointments ?></span></div>
-            <div class="stat-card"><h3><i class="fas fa-check-circle"></i> Cleared Today</h3><span class="stat-number"><?= $cleared_today ?></span></div>
+            <div class="stat-card"><h3><i class="fas fa-check-circle"></i> Cleared Patients</h3><span class="stat-number"><?= $cleared_patients ?></span></div>
             <div class="stat-card"><h3><i class="fas fa-dollar-sign"></i> Paid Patients</h3><span class="stat-number"><?= $paid_patients ?></span></div>
         </div>
         <div class="quick-actions">
@@ -135,7 +138,7 @@ if ($is_admin) {
         </div>
 
         <?php else: ?>
-        <!-- CUSTOMER VIEW (fixed) -->
+        <!-- CUSTOMER VIEW -->
         <?php if (!$myRecord): ?>
             <div class="alert error" style="margin-bottom:1rem;">
                 <strong>⚠️ Patient record missing</strong><br>
