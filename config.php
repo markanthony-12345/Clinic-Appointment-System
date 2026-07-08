@@ -1,5 +1,5 @@
 <?php
-// Enable error display for debugging (remove later)
+// Enable error display (remove later)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -20,102 +20,32 @@ header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 
-// Database credentials – EDIT THESE for your local MySQL
+// Database credentials
 $servername = "localhost";
 $db_username = "root";
-$db_password = "";      // Change to your MySQL password (XAMPP default is empty)
+$db_password = "";
 $dbname = "clinic_management";
 
-// Connect with friendly errors
 try {
     $pdo = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8mb4", $db_username, $db_password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
-    $msg = $e->getMessage();
-    if (strpos($msg, 'Access denied') !== false)
-        die("❌ DB Access denied. Check password in config.php");
-    elseif (strpos($msg, 'Unknown database') !== false)
-        die("❌ Database 'clinic_management' not found. Import the SQL file.");
-    elseif (strpos($msg, 'Connection refused') !== false)
-        die("❌ MySQL not running. Start XAMPP MySQL.");
-    else
-        die("❌ DB connection failed: " . $msg);
+    die("DB connection failed: " . $e->getMessage());
 }
 
-// ========== NEW: Doctor day‑of‑week validation ==========
-function doctorWorksOnDay($pdo, $doctor_id, $date) {
-    $stmt = $pdo->prepare("SELECT schedule FROM doctors WHERE doctor_id = ?");
-    $stmt->execute([$doctor_id]);
-    $schedule = $stmt->fetchColumn();
-    if (!$schedule) return true; // no schedule = always available
+// Auto-load service classes (simple)
+require_once __DIR__ . '/classes/Database.php';
+require_once __DIR__ . '/classes/Auth.php';
+require_once __DIR__ . '/classes/AppointmentService.php';
+require_once __DIR__ . '/classes/PatientService.php';
+require_once __DIR__ . '/classes/PaymentService.php';
+require_once __DIR__ . '/classes/LabService.php';
+require_once __DIR__ . '/classes/MedicineService.php';
+require_once __DIR__ . '/classes/ReportService.php';
 
-    $dayOfWeek = date('l', strtotime($date)); // e.g. "Monday"
-    $scheduleLower = strtolower($schedule);
-    
-    // Expand ranges like "Monday – Wednesday" into individual days
-    $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    $workingDays = [];
-    foreach ($days as $day) {
-        if (strpos($scheduleLower, $day) !== false) {
-            $workingDays[] = ucfirst($day);
-        }
-    }
-    // If we found explicit days, use them
-    if (!empty($workingDays)) {
-        return in_array($dayOfWeek, $workingDays);
-    }
-    
-    // Otherwise, try to parse a range like "Monday – Wednesday"
-    if (preg_match('/([A-Za-z]+)\s*[–-]\s*([A-Za-z]+)/i', $schedule, $matches)) {
-        $start = ucfirst(strtolower($matches[1]));
-        $end   = ucfirst(strtolower($matches[2]));
-        $daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        $startIndex = array_search($start, $daysOfWeek);
-        $endIndex   = array_search($end, $daysOfWeek);
-        if ($startIndex !== false && $endIndex !== false) {
-            if ($startIndex <= $endIndex) {
-                $range = array_slice($daysOfWeek, $startIndex, $endIndex - $startIndex + 1);
-            } else {
-                // wrap around (e.g., Friday – Monday)
-                $range = array_merge(array_slice($daysOfWeek, $startIndex), array_slice($daysOfWeek, 0, $endIndex + 1));
-            }
-            return in_array($dayOfWeek, $range);
-        }
-    }
-    
-    // If nothing matched, assume available (or you could return false)
-    return true;
-}
-// ========== Modified doctorAvailable with day check ==========
-function doctorAvailable($pdo, $doctor_id, $date) {
-    // First, check if the doctor works on this day
-    if (!doctorWorksOnDay($pdo, $doctor_id, $date)) {
-        return [
-            'available' => false,
-            'remaining' => 0,
-            'max_patients' => 0,
-            'current_count' => 0,
-            'reason' => 'Doctor does not work on ' . date('l', strtotime($date))
-        ];
-    }
-    // Then check daily patient limit
-    $stmt = $pdo->prepare("SELECT max_patients FROM doctors WHERE doctor_id = ?");
-    $stmt->execute([$doctor_id]);
-    $max = $stmt->fetchColumn();
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND DATE(appointment_date) = ? AND status != 'Cancelled'");
-    $stmt->execute([$doctor_id, $date]);
-    $current = $stmt->fetchColumn();
-    return [
-        'available' => $current < $max,
-        'remaining' => $max - $current,
-        'max_patients' => $max,
-        'current_count' => $current
-    ];
-}
-
-// Auth guards
+// Auth guards – now only Admin allowed
 function requireLogin() {
     if (session_status() === PHP_SESSION_NONE) session_start();
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
@@ -124,11 +54,15 @@ function requireLogin() {
     }
     $_SESSION['last_activity'] = time();
     if (!isset($_SESSION['user_logged'])) { header("Location: login.php"); exit; }
+    // Enforce Admin role
+    if ($_SESSION['user_logged']['role'] !== 'Admin') {
+        session_destroy();
+        header("Location: login.php?error=access_denied"); exit;
+    }
 }
 
 function requireAdmin() {
-    requireLogin();
-    if ($_SESSION['user_logged']['role'] !== 'Admin') die("Access denied. Admin only.");
+    requireLogin(); // already enforces admin
 }
 
 // CSRF helpers
@@ -164,18 +98,7 @@ function clearLoginAttempts() {
     $_SESSION['login_lockout_time'] = 0;
 }
 
-// Sanitizer
 function sanitize($input) {
     return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
-}
-
-// Helpers
-function getPatientName($pdo, $id) {
-    $stmt = $pdo->prepare("SELECT fullname FROM patients WHERE patient_id = ?");
-    $stmt->execute([$id]);
-    return $stmt->fetchColumn();
-}
-function recalcTotal($pdo, $patient_id) {
-    $pdo->prepare("UPDATE payments SET total_amount = consultation_fee + laboratory_fee WHERE patient_id = ?")->execute([$patient_id]);
 }
 ?>

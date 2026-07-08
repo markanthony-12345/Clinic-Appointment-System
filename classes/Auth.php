@@ -13,7 +13,8 @@ class Auth {
         }
     }
 
-    public function register($username, $password, $fullname, $role = 'User') {
+    // Only allow Admin role registration (for first user)
+    public function register($username, $password, $fullname, $role = 'Admin') {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $this->pdo->prepare("INSERT INTO users (username, password, fullname, role) VALUES (?, ?, ?, ?)");
         try {
@@ -24,11 +25,12 @@ class Auth {
         }
     }
 
+    // Login – only Admin allowed
     public function login($username, $password) {
         $stmt = $this->pdo->prepare("SELECT * FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && password_verify($password, $user['password']) && $user['role'] === 'Admin') {
             $_SESSION[$this->sessionKey] = $user;
             return true;
         }
@@ -41,11 +43,6 @@ class Auth {
 
     public function getUser() {
         return $_SESSION[$this->sessionKey] ?? null;
-    }
-
-    public function hasRole($role) {
-        $user = $this->getUser();
-        return $user && $user['role'] === $role;
     }
 
     public function logout() {
