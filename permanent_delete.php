@@ -10,26 +10,23 @@ if (!$pid) {
     exit;
 }
 
+// Double confirmation required
+if (!isset($_GET['confirm']) || $_GET['confirm'] !== 'yes') {
+    echo json_encode(['success' => false, 'message' => 'Confirmation required']);
+    exit;
+}
+
 try {
     $patientService = new PatientService();
-    $patient = $patientService->getById($pid);
-    
-    if (!$patient) {
-        echo json_encode(['success' => false, 'message' => 'Patient not found']);
-        exit;
-    }
-    
-    // Soft delete – archive the patient
-    $result = $patientService->archive($pid);
+    $result = $patientService->permanentlyDelete($pid);
     
     if ($result) {
         echo json_encode([
             'success' => true, 
-            'message' => 'Patient archived successfully.',
-            'archived' => true
+            'message' => 'Patient permanently deleted.'
         ]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Archive failed']);
+        echo json_encode(['success' => false, 'message' => 'Deletion failed']);
     }
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

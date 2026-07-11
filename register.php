@@ -23,7 +23,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isFirstUser) {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $fullname = trim($_POST['fullname'] ?? '');
-    if ($username && $password && $fullname) {
+
+    // Validate password: at least 8 chars, contains letter, number, special character
+    $passwordErrors = [];
+    if (strlen($password) < 8) {
+        $passwordErrors[] = "Password must be at least 8 characters long.";
+    }
+    if (!preg_match('/[A-Za-z]/', $password)) {
+        $passwordErrors[] = "Password must contain at least one letter.";
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        $passwordErrors[] = "Password must contain at least one number.";
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        $passwordErrors[] = "Password must contain at least one special character (e.g., !@#$%^&*).";
+    }
+
+    if (!empty($passwordErrors)) {
+        $error = implode("<br>", $passwordErrors);
+    } elseif ($username && $password && $fullname) {
         // Always assign Admin role
         if ($auth->register($username, $password, $fullname, 'Admin')) {
             $success = "Admin account created successfully. Please <a href='login.php'>login</a>.";
@@ -104,6 +122,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isFirstUser) {
         .footer a:hover {
             text-decoration: underline;
         }
+        .password-helper {
+            font-size: 0.8rem;
+            color: #5b7f9c;
+            margin-top: 0.25rem;
+        }
+        .password-helper i {
+            margin-right: 4px;
+        }
+        .password-helper ul {
+            margin: 0.25rem 0 0 1.2rem;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -112,14 +142,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isFirstUser) {
     <div class="register-subtitle">Create the first admin account</div>
 
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert-danger"><?= $error ?></div>
     <?php endif; ?>
     <?php if ($success): ?>
         <div class="alert alert-success"><?= $success ?></div>
     <?php endif; ?>
 
     <?php if ($isFirstUser): ?>
-        <form method="POST">
+        <form method="POST" id="registerForm">
             <div class="mb-3">
                 <label class="form-label">Full Name</label>
                 <input type="text" name="fullname" class="form-control" required>
@@ -130,7 +160,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isFirstUser) {
             </div>
             <div class="mb-3">
                 <label class="form-label">Password</label>
-                <input type="password" name="password" class="form-control" required>
+                <input type="password" name="password" id="password" class="form-control" 
+                       required minlength="8" 
+                       pattern="(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}" 
+                       title="Password must be at least 8 characters and contain a letter, a number, and a special character.">
+                <div class="password-helper">
+                    <i class="fas fa-info-circle"></i> Requirements:
+                    <ul>
+                        <li>At least 8 characters</li>
+                        <li>At least one letter (A‑Z or a‑z)</li>
+                        <li>At least one number (0‑9)</li>
+                        <li>At least one special character (e.g., !@#$%^&*)</li>
+                    </ul>
+                </div>
             </div>
             <button type="submit" class="btn-register"><i class="fas fa-user-plus me-2"></i>Create Admin Account</button>
         </form>
@@ -140,5 +182,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isFirstUser) {
         <div class="footer"><a href="login.php"><i class="fas fa-sign-in-alt me-1"></i>Go to Login</a></div>
     <?php endif; ?>
 </div>
+
+<!-- Additional client‑side validation (fallback) -->
+<script>
+document.getElementById('registerForm')?.addEventListener('submit', function(e) {
+    const password = document.getElementById('password').value;
+    const errors = [];
+    if (password.length < 8) {
+        errors.push("at least 8 characters");
+    }
+    if (!/[A-Za-z]/.test(password)) {
+        errors.push("a letter");
+    }
+    if (!/[0-9]/.test(password)) {
+        errors.push("a number");
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+        errors.push("a special character");
+    }
+    if (errors.length > 0) {
+        alert("Password must contain: " + errors.join(", ") + ".");
+        e.preventDefault();
+        return false;
+    }
+    return true;
+});
+</script>
 </body>
 </html>

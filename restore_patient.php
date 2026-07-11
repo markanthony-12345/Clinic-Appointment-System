@@ -19,17 +19,15 @@ try {
         exit;
     }
     
-    // Soft delete – archive the patient
-    $result = $patientService->archive($pid);
+    $result = $patientService->restore($pid);
     
     if ($result) {
         echo json_encode([
             'success' => true, 
-            'message' => 'Patient archived successfully.',
-            'archived' => true
+            'message' => 'Patient restored successfully.'
         ]);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Archive failed']);
+        echo json_encode(['success' => false, 'message' => 'Restore failed']);
     }
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

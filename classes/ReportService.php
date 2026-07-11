@@ -10,13 +10,14 @@ class ReportService {
     }
 
     public function getDashboardStats() {
-        $total_patients = $this->pdo->query("SELECT COUNT(*) FROM patients")->fetchColumn();
+        $total_patients = $this->pdo->query("SELECT COUNT(*) FROM patients WHERE is_archived = 0")->fetchColumn();
         $pending_appointments = $this->pdo->query("SELECT COUNT(*) FROM appointments WHERE status='Pending'")->fetchColumn();
         $paid_patients = $this->pdo->query("SELECT COUNT(*) FROM payments WHERE amount_paid >= total_amount")->fetchColumn();
 
         $cleared_patients = $this->pdo->query("
             SELECT COUNT(DISTINCT p.patient_id) FROM patients p
-            WHERE EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed')
+            WHERE p.is_archived = 0
+            AND EXISTS (SELECT 1 FROM appointments a WHERE a.patient_id = p.patient_id AND a.status = 'Completed')
             AND EXISTS (SELECT 1 FROM laboratory l WHERE l.patient_id = p.patient_id AND l.status = 'Completed')
             AND EXISTS (SELECT 1 FROM medicines m WHERE m.patient_id = p.patient_id AND m.status = 'Taken')
             AND EXISTS (SELECT 1 FROM payments py WHERE py.patient_id = p.patient_id AND py.amount_paid >= py.total_amount)
@@ -63,6 +64,7 @@ class ReportService {
             SELECT DATE(date_registered) as date, COUNT(*) as count
             FROM patients
             WHERE date_registered >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            AND is_archived = 0
             GROUP BY DATE(date_registered)
             ORDER BY date ASC
         ");
@@ -71,11 +73,11 @@ class ReportService {
     }
 
     public function getRecentPatients($limit = 10) {
-        // FIX: Use direct integer injection instead of binding LIMIT
         $limit = (int)$limit;
         $stmt = $this->pdo->query("
             SELECT p.*, COALESCE(py.total_amount,0) AS total_amount, COALESCE(py.amount_paid,0) AS amount_paid
             FROM patients p LEFT JOIN payments py ON p.patient_id = py.patient_id
+            WHERE p.is_archived = 0
             ORDER BY p.date_registered DESC LIMIT $limit
         ");
         return $stmt->fetchAll();

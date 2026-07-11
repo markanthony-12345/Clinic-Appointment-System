@@ -22,15 +22,21 @@ if (!$patient_id || !$doctor_id || !$date || !$time) {
     exit;
 }
 
-$time_24 = date('H:i:s', strtotime($time));
-$datetime = $date . ' ' . $time_24;
+// 1. Prevent booking in the past
+$today = date('Y-m-d');
+if ($date < $today) {
+    header("Location: dashboard.php?error=Cannot book appointment in the past");
+    exit;
+}
 
+// 2. Validate patient exists
 $patientService = new PatientService();
 if (!$patientService->getById($patient_id)) {
     header("Location: dashboard.php?error=Invalid Patient");
     exit;
 }
 
+// 3. Validate doctor availability (day + max)
 $apptService = new AppointmentService();
 $availability = $apptService->checkAvailability($doctor_id, $date);
 if (!$availability['available']) {
@@ -39,12 +45,16 @@ if (!$availability['available']) {
     exit;
 }
 
-// Check exact time slot
+// 4. Check exact time slot
 $slots = $apptService->getAvailableTimeSlots($doctor_id, $date);
 if (!in_array($time, $slots)) {
     header("Location: dashboard.php?error=Time slot already taken");
     exit;
 }
+
+// Create appointment
+$time_24 = date('H:i:s', strtotime($time));
+$datetime = $date . ' ' . $time_24;
 
 if ($apptService->createAppointment($patient_id, $doctor_id, $datetime, $lab_req)) {
     header("Location: dashboard.php?success=Appointment booked!");

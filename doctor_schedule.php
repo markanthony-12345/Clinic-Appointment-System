@@ -11,6 +11,20 @@ $message = '';
 $apptService = new AppointmentService();
 $patientService = new PatientService();
 
+// Handle doctor deletion (soft delete – set is_active = 0)
+if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
+    $doctor_id = (int)$_GET['delete'];
+    // Confirm CSRF token (optional but good)
+    // For simplicity, we'll use a confirmation step in JS, but we can also check token.
+    // We'll use a simple confirmation in the link.
+    $stmt = $pdo->prepare("UPDATE doctors SET is_active = 0 WHERE doctor_id = ?");
+    if ($stmt->execute([$doctor_id])) {
+        $message = '<div class="alert alert-success">Doctor has been resigned (removed from active list).</div>';
+    } else {
+        $message = '<div class="alert alert-danger">Failed to resign doctor.</div>';
+    }
+}
+
 // Handle adding new doctor
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_doctor'])) {
     $doctor_name = sanitize($_POST['doctor_name']);
@@ -19,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_doctor'])) {
     $max_patients = (int)$_POST['max_patients'];
 
     if ($doctor_name && $max_patients > 0) {
-        $stmt = $pdo->prepare("INSERT INTO doctors (doctor_name, specialization, schedule, max_patients) VALUES (?, ?, ?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO doctors (doctor_name, specialization, schedule, max_patients, is_active) VALUES (?, ?, ?, ?, 1)");
         $stmt->execute([$doctor_name, $specialization, $schedule, $max_patients]);
         $message = '<div class="alert alert-success">Doctor added successfully!</div>';
     } else {
@@ -28,7 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_doctor'])) {
 }
 
 $selected_date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
-$doctors = $pdo->query("SELECT * FROM doctors ORDER BY doctor_id")->fetchAll();
+
+// Only fetch active doctors (is_active = 1)
+$doctors = $pdo->query("SELECT * FROM doctors WHERE is_active = 1 ORDER BY doctor_id")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,96 +56,27 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY doctor_id")->fetchAll();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="assets/style.css">
     <style>
-        body {
-            background: #f0f4f8;
-        }
+        body { background: #f0f4f8; }
         .schedule-card {
             border-left: 4px solid #1e6f9f;
             transition: transform 0.2s;
         }
-        .schedule-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-        }
-        .doctor-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: #1a2c3e;
-        }
-        .specialization-badge {
-            font-size: 0.75rem;
-            background: #eef2f8;
-            color: #2c5f8a;
-            padding: 0.25rem 0.75rem;
-            border-radius: 2rem;
-        }
-        .stat-label {
-            font-weight: 500;
-            color: #4a6f8c;
-        }
-        .stat-value {
-            font-weight: 700;
-            color: #1e4a6e;
-        }
-        .appointment-list {
-            margin-top: 0.8rem;
-            padding-top: 0.8rem;
-            border-top: 1px solid #e2e8f0;
-        }
-        .appointment-list ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        .appointment-list li {
-            padding: 0.3rem 0;
-            border-bottom: 1px solid #f0f2f5;
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-        .appointment-list li:last-child {
-            border-bottom: none;
-        }
-        .add-doctor-form {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-top: 2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .add-doctor-form h4 {
-            margin-bottom: 1rem;
-            color: #1e4a6e;
-        }
-        .date-picker-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        .date-picker-card label {
-            font-weight: 500;
-            color: #2c5f8a;
-            margin-right: 0.5rem;
-        }
-        .date-picker-card input[type="date"] {
-            border: 1px solid #cddae9;
-            border-radius: 0.5rem;
-            padding: 0.4rem 0.8rem;
-        }
-        .date-picker-card .btn {
-            border-radius: 2rem;
-        }
-        @media (max-width: 576px) {
-            .date-picker-card {
-                flex-direction: column;
-                align-items: stretch;
-            }
-        }
+        .schedule-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+        .doctor-name { font-size: 1.2rem; font-weight: 600; color: #1a2c3e; }
+        .specialization-badge { font-size: 0.75rem; background: #eef2f8; color: #2c5f8a; padding: 0.25rem 0.75rem; border-radius: 2rem; }
+        .stat-label { font-weight: 500; color: #4a6f8c; }
+        .stat-value { font-weight: 700; color: #1e4a6e; }
+        .appointment-list { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #e2e8f0; }
+        .appointment-list ul { list-style: none; padding-left: 0; }
+        .appointment-list li { padding: 0.3rem 0; border-bottom: 1px solid #f0f2f5; display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .appointment-list li:last-child { border-bottom: none; }
+        .add-doctor-form { background: white; border-radius: 1rem; padding: 1.5rem; margin-top: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .add-doctor-form h4 { margin-bottom: 1rem; color: #1e4a6e; }
+        .date-picker-card { background: white; border-radius: 1rem; padding: 1rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .date-picker-card label { font-weight: 500; color: #2c5f8a; margin-right: 0.5rem; }
+        .date-picker-card input[type="date"] { border: 1px solid #cddae9; border-radius: 0.5rem; padding: 0.4rem 0.8rem; }
+        .btn-delete { border-radius: 2rem; padding: 0.2rem 0.8rem; font-size: 0.75rem; }
+        @media (max-width: 576px) { .date-picker-card { flex-direction: column; align-items: stretch; } }
     </style>
 </head>
 <body>
@@ -191,6 +138,10 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY doctor_id")->fetchAll();
                     </div>
                     <div>
                         <span class="badge bg-primary">Max: <?= $max ?: 'Unlimited' ?></span>
+                        <!-- Delete button -->
+                        <button class="btn btn-danger btn-delete ms-2" onclick="deleteDoctor(<?= $d['doctor_id'] ?>, '<?= htmlspecialchars($d['doctor_name'], ENT_QUOTES) ?>')">
+                            <i class="fas fa-user-slash me-1"></i>Resign
+                        </button>
                     </div>
                 </div>
 
@@ -261,13 +212,20 @@ $doctors = $pdo->query("SELECT * FROM doctors ORDER BY doctor_id")->fetchAll();
     <?php endif; ?>
 </div>
 
-<!-- Bootstrap JS (optional for toggles) -->
+<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<!-- Auto-submit date picker (if you prefer no button) -->
 <script>
+    // Auto-submit date picker
     document.getElementById('datePicker')?.addEventListener('change', function() {
         this.form.submit();
     });
+
+    // Delete/Resign doctor function
+    function deleteDoctor(doctorId, doctorName) {
+        if (!confirm(`Resign doctor "${doctorName}"?\n\nThis will remove them from the active list.\n\nAppointment history will be preserved.`)) return;
+        // Redirect with delete parameter and a CSRF token (optional but we skip for simplicity)
+        window.location.href = `doctor_schedule.php?delete=${doctorId}`;
+    }
 </script>
 </body>
 </html>
