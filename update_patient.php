@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $patient_id     = (int)($_POST['patient_id'] ?? 0);
 $fullname       = sanitize($_POST['fullname'] ?? '');
 $age            = (int)($_POST['age'] ?? 0);
-$sex            = sanitize($_POST['sex'] ?? '');
+$gender         = sanitize($_POST['gender'] ?? '');
 $address        = sanitize($_POST['address'] ?? '');
 $contact_number = trim($_POST['contact_number'] ?? '');
 $email          = trim($_POST['email'] ?? '');
@@ -33,7 +33,7 @@ if (strlen($digits) !== 11) {
 if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors[] = "Invalid email.";
 }
-if (empty($sex)) $errors[] = "Sex is required.";
+if (empty($gender)) $errors[] = "Gender is required.";
 
 if (!empty($errors)) {
     header("Location: edit_patient.php?id=$patient_id&error=" . urlencode(implode(", ", $errors)));
@@ -44,12 +44,12 @@ $contact_clean = $digits;
 
 $stmt = $pdo->prepare("
     UPDATE patients 
-    SET fullname = ?, age = ?, sex = ?, address = ?, contact_number = ?, 
+    SET fullname = ?, age = ?, gender = ?, address = ?, contact_number = ?, 
         email = ?, civil_status = ?, citizenship = ?, place_of_birth = ?
     WHERE patient_id = ?
 ");
 $stmt->execute([
-    $fullname, $age, $sex, $address, $contact_clean,
+    $fullname, $age, $gender, $address, $contact_clean,
     $email, $civil_status, $citizenship, $place_of_birth,
     $patient_id
 ]);

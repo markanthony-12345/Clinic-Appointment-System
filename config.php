@@ -35,7 +35,7 @@ try {
     die("DB connection failed: " . $e->getMessage());
 }
 
-// Auto-load service classes (simple)
+// Auto-load service classes
 require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Auth.php';
 require_once __DIR__ . '/classes/AppointmentService.php';
@@ -45,7 +45,7 @@ require_once __DIR__ . '/classes/LabService.php';
 require_once __DIR__ . '/classes/MedicineService.php';
 require_once __DIR__ . '/classes/ReportService.php';
 
-// Auth guards – now only Admin allowed
+// ===== AUTH GUARDS =====
 function requireLogin() {
     if (session_status() === PHP_SESSION_NONE) session_start();
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
@@ -53,8 +53,9 @@ function requireLogin() {
         header("Location: login.php?timeout=1"); exit;
     }
     $_SESSION['last_activity'] = time();
-    if (!isset($_SESSION['user_logged'])) { header("Location: login.php"); exit; }
-    // Enforce Admin role
+    if (!isset($_SESSION['user_logged'])) {
+        header("Location: login.php"); exit;
+    }
     if ($_SESSION['user_logged']['role'] !== 'Admin') {
         session_destroy();
         header("Location: login.php?error=access_denied"); exit;
@@ -62,19 +63,22 @@ function requireLogin() {
 }
 
 function requireAdmin() {
-    requireLogin(); // already enforces admin
+    requireLogin();
 }
 
-// CSRF helpers
+// ===== CSRF HELPERS =====
 function generateCsrfToken() {
-    if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
     return $_SESSION['csrf_token'];
 }
+
 function verifyCsrfToken($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token ?? '');
 }
 
-// Rate limiting
+// ===== RATE LIMITING =====
 function checkLoginRateLimit() {
     $max = 5; $lockout = 300;
     if (!isset($_SESSION['login_attempts'])) {
@@ -83,16 +87,20 @@ function checkLoginRateLimit() {
     }
     if ($_SESSION['login_attempts'] >= $max) {
         $elapsed = time() - $_SESSION['login_lockout_time'];
-        if ($elapsed < $lockout) return ['locked' => true, 'remaining' => $lockout - $elapsed];
+        if ($elapsed < $lockout) {
+            return ['locked' => true, 'remaining' => $lockout - $elapsed];
+        }
         $_SESSION['login_attempts'] = 0;
         $_SESSION['login_lockout_time'] = 0;
     }
     return ['locked' => false, 'remaining' => 0];
 }
+
 function recordFailedLogin() {
     $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
     $_SESSION['login_lockout_time'] = time();
 }
+
 function clearLoginAttempts() {
     $_SESSION['login_attempts'] = 0;
     $_SESSION['login_lockout_time'] = 0;
