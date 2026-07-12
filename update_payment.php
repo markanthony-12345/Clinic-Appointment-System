@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $patient_id = (int)$_POST['patient_id'];
 $payment_amount = floatval($_POST['payment_amount']);
+$payment_method = sanitize($_POST['payment_method'] ?? 'Cash');
 
 if ($patient_id <= 0 || $payment_amount <= 0) {
     header("Location: patient_overview.php?patient_id=$patient_id&error=invalid_amount");
@@ -29,11 +30,12 @@ if ($pay) {
         $new_paid = $total;
     }
 
-    $update = $pdo->prepare("UPDATE payments SET amount_paid = ? WHERE patient_id = ?");
-    $update->execute([$new_paid, $patient_id]);
+    // Update payment record with new amount and method
+    $update = $pdo->prepare("UPDATE payments SET amount_paid = ?, payment_method = ?, payment_date = NOW() WHERE patient_id = ?");
+    $update->execute([$new_paid, $payment_method, $patient_id]);
 }
 
-// Redirect back to patient overview with success message
-header("Location: patient_overview.php?patient_id=$patient_id&success=1");
+// Redirect back to payments page with success message
+header("Location: payments.php?success=1");
 exit;
 ?>

@@ -23,6 +23,9 @@ if (!empty($data['patient_id'])) {
     $pStmt->execute([$data['patient_id']]);
     $patientName = $pStmt->fetchColumn();
 }
+
+// Get doctors for dropdown
+$doctors = $pdo->query("SELECT doctor_id, doctor_name, specialization FROM doctors ORDER BY doctor_name")->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -45,82 +48,95 @@ if (!empty($data['patient_id'])) {
     </style>
 </head>
 <body>
-<div class="container py-4">
-    <!-- Header -->
-    <header class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
-        <h1 class="h3"><i class="fas fa-vial me-2"></i>Edit Lab Record</h1>
-        <a href="laboratory.php" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-1"></i>Back to Laboratory</a>
-    </header>
+    <?php include 'sidebar.php'; ?>
+    <div class="main-content">
+        <div class="container py-4">
+            <header class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
+                <h1 class="h3"><i class="fas fa-vial me-2"></i>Edit Lab Record</h1>
+                <a href="laboratory.php" class="btn btn-outline-primary"><i class="fas fa-arrow-left me-1"></i>Back to Laboratory</a>
+            </header>
 
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <i class="fas fa-edit me-2"></i>Lab Record #<?= $data['lab_id'] ?>
-                    <?php if ($patientName): ?>
-                        <span class="badge bg-info ms-2"><?= htmlspecialchars($patientName) ?></span>
-                    <?php endif; ?>
-                </div>
-                <div class="card-body">
-                    <form action="update_lab.php" method="POST">
-                        <input type="hidden" name="lab_id" value="<?= $data['lab_id'] ?>">
-
-                        <div class="mb-3">
-                            <label class="form-label">Patient ID</label>
-                            <input type="number" name="patient_id" class="form-control" value="<?= $data['patient_id'] ?>" required>
-                            <div class="form-text">Enter the patient's ID number.</div>
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <i class="fas fa-edit me-2"></i>Lab Record #<?= $data['lab_id'] ?>
+                            <?php if ($patientName): ?>
+                                <span class="badge bg-info ms-2"><?= htmlspecialchars($patientName) ?></span>
+                            <?php endif; ?>
                         </div>
+                        <div class="card-body">
+                            <form action="update_lab.php" method="POST">
+                                <input type="hidden" name="lab_id" value="<?= $data['lab_id'] ?>">
 
-                        <?php if ($patientName): ?>
-                            <div class="mb-3">
-                                <label class="form-label">Patient Name</label>
-                                <input type="text" class="form-control" value="<?= htmlspecialchars($patientName) ?>" disabled>
-                            </div>
-                        <?php endif; ?>
+                                <div class="mb-3">
+                                    <label class="form-label">Patient ID</label>
+                                    <input type="number" name="patient_id" class="form-control" value="<?= $data['patient_id'] ?>" required>
+                                    <div class="form-text">Enter the patient's ID number.</div>
+                                </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Test Type</label>
-                            <select name="laboratory_type" class="form-select" required>
-                                <?php
-                                $types = ['X-ray', 'Ultrasound', 'CBC', 'Urinalysis', 'Blood Chemistry', 'ECG'];
-                                foreach ($types as $t):
-                                    $selected = ($data['laboratory_type'] == $t) ? 'selected' : '';
-                                ?>
-                                    <option <?= $selected ?>><?= $t ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                                <?php if ($patientName): ?>
+                                    <div class="mb-3">
+                                        <label class="form-label">Patient Name</label>
+                                        <input type="text" class="form-control" value="<?= htmlspecialchars($patientName) ?>" disabled>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Doctor</label>
+                                    <select name="doctor_id" class="form-select">
+                                        <option value="">Select Doctor (optional)</option>
+                                        <?php foreach ($doctors as $d): 
+                                            $selected = ($data['doctor_id'] == $d['doctor_id']) ? 'selected' : '';
+                                        ?>
+                                            <option value="<?= $d['doctor_id'] ?>" <?= $selected ?>><?= htmlspecialchars($d['doctor_name']) ?> (<?= htmlspecialchars($d['specialization']) ?>)</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Test Type</label>
+                                    <select name="laboratory_type" class="form-select" required>
+                                        <?php
+                                        $types = ['X-ray', 'Ultrasound', 'CBC', 'Urinalysis', 'Blood Chemistry', 'ECG'];
+                                        foreach ($types as $t):
+                                            $selected = ($data['laboratory_type'] == $t) ? 'selected' : '';
+                                        ?>
+                                            <option <?= $selected ?>><?= $t ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-select" required>
+                                        <?php
+                                        $statuses = ['Not Yet Taken', 'Ongoing', 'Completed'];
+                                        foreach ($statuses as $s):
+                                            $selected = ($data['status'] == $s) ? 'selected' : '';
+                                        ?>
+                                            <option <?= $selected ?>><?= $s ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Result</label>
+                                    <textarea name="result" class="form-control" rows="4"><?= htmlspecialchars($data['result'] ?? '') ?></textarea>
+                                    <div class="form-text">Enter the lab test result (optional).</div>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Update</button>
+                                    <a href="laboratory.php" class="btn btn-secondary">Cancel</a>
+                                </div>
+                            </form>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Status</label>
-                            <select name="status" class="form-select" required>
-                                <?php
-                                $statuses = ['Not Yet Taken', 'Ongoing', 'Completed'];
-                                foreach ($statuses as $s):
-                                    $selected = ($data['status'] == $s) ? 'selected' : '';
-                                ?>
-                                    <option <?= $selected ?>><?= $s ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Result</label>
-                            <textarea name="result" class="form-control" rows="4"><?= htmlspecialchars($data['result'] ?? '') ?></textarea>
-                            <div class="form-text">Enter the lab test result (optional).</div>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Update</button>
-                            <a href="laboratory.php" class="btn btn-secondary">Cancel</a>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
