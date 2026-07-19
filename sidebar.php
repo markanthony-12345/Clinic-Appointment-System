@@ -1,8 +1,10 @@
-<nav class="sidebar">
+<nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <i class="fas fa-heartbeat brand-icon"></i>
-        <span class="brand-text">ClinicPro</span>
-        <span class="brand-sub">Admin Panel</span>
+        <div>
+            <span class="brand-text">ClinicPro</span>
+            <span class="brand-sub">Admin Panel</span>
+        </div>
     </div>
     <ul class="sidebar-nav">
         <li class="nav-item">
@@ -31,8 +33,8 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'payments.php' ? 'active' : '' ?>" href="payments.php">
-                <i class="fas fa-credit-card"></i> Payments
+            <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'billing.php' ? 'active' : '' ?>" href="billing.php">
+                <i class="fas fa-file-invoice-dollar"></i> Transactions
             </a>
         </li>
         <li class="nav-item">
@@ -45,9 +47,7 @@
                 <i class="fas fa-chart-line"></i> Reports
             </a>
         </li>
-        <!-- Spacer to push logout to bottom -->
-        <li class="nav-item flex-grow-1"></li>
-        <!-- Logout at the bottom -->
+        <li class="nav-item" style="flex:1;"></li>
         <li class="nav-item">
             <a class="nav-link text-danger" href="logout.php">
                 <i class="fas fa-sign-out-alt"></i> Logout

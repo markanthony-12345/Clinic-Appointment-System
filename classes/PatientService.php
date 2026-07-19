@@ -1,4 +1,5 @@
 <?php
+
 class PatientService {
     private $pdo;
 
@@ -54,7 +55,8 @@ class PatientService {
         $labService = new LabService();
         $medService = new MedicineService();
 
-        $appointments = $apptService->getAppointmentsByPatient($patient_id);
+        // ✅ Fixed: use getByPatient() instead of getAppointmentsByPatient()
+        $appointments = $apptService->getByPatient($patient_id);
         $lab_records = $labService->getByPatient($patient_id);
         $medicines = $medService->getByPatient($patient_id);
 
@@ -106,5 +108,19 @@ class PatientService {
         }
         return $pay;
     }
+    
+    /**
+     * Get appointment history for a patient
+     */
+    public function getAppointmentHistory($patient_id) {
+        $stmt = $this->pdo->prepare("
+            SELECT a.*, d.doctor_name, d.specialization
+            FROM appointments a
+            LEFT JOIN doctors d ON a.doctor_id = d.doctor_id
+            WHERE a.patient_id = ?
+            ORDER BY a.appointment_date DESC
+        ");
+        $stmt->execute([$patient_id]);
+        return $stmt->fetchAll();
+    }
 }
-?>

@@ -1,6 +1,8 @@
 <?php
-require_once 'config.php';
-requireLogin();
+// This file has been merged into the unified Billing & Transactions module.
+// Please use billing.php instead.
+header("Location: billing.php");
+exit;
 
 // Fetch all patients for the dropdown
 $patients = $pdo->query("
