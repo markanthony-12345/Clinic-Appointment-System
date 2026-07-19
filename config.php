@@ -44,6 +44,8 @@ require_once __DIR__ . '/classes/PaymentService.php';
 require_once __DIR__ . '/classes/LabService.php';
 require_once __DIR__ . '/classes/MedicineService.php';
 require_once __DIR__ . '/classes/ReportService.php';
+require_once __DIR__ . '/classes/TransactionService.php';
+require_once __DIR__ . '/classes/RecommendationService.php';
 
 // ===== AUTH GUARDS =====
 function requireLogin() {

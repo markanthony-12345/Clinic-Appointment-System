@@ -51,30 +51,33 @@ $csrf = generateCsrfToken();
     <title>Clinic Admin Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* (same CSS as before, no changes needed) */
         body {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 1rem;
         }
         .login-card {
             max-width: 420px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 2rem;
             padding: 2.5rem 2rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.15);
             transition: transform 0.2s ease;
         }
-        .login-card:hover { transform: translateY(-2px); }
+        .login-card:hover {
+            transform: translateY(-2px);
+        }
         .login-icon {
             display: flex;
             justify-content: center;
@@ -82,86 +85,100 @@ $csrf = generateCsrfToken();
         }
         .login-icon i {
             font-size: 3.5rem;
-            color: #1e6f9f;
-            background: rgba(30, 111, 159, 0.1);
+            color: #60a5fa;
+            background: rgba(96, 165, 250, 0.15);
             padding: 1rem;
             border-radius: 50%;
-            box-shadow: 0 8px 20px rgba(30, 111, 159, 0.15);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
         }
         .login-title {
             text-align: center;
             font-weight: 700;
             font-size: 1.8rem;
-            color: #1a2c3e;
+            color: white;
             margin-bottom: 0.3rem;
         }
         .login-subtitle {
             text-align: center;
-            color: #5b7f9c;
+            color: rgba(255,255,255,0.6);
             font-size: 0.9rem;
             margin-bottom: 1.8rem;
         }
-        .form-floating { margin-bottom: 1.2rem; }
+        .form-floating {
+            margin-bottom: 1.2rem;
+        }
         .form-floating input {
             border-radius: 0.75rem;
-            border: 1px solid #dfe6ef;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.08);
+            color: white;
             padding: 0.8rem 1rem;
             height: auto;
             font-size: 0.95rem;
-            background: #f8fafc;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
         .form-floating input:focus {
-            border-color: #1e6f9f;
-            box-shadow: 0 0 0 3px rgba(30, 111, 159, 0.15);
-            background: white;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+            background: rgba(255,255,255,0.12);
+            color: white;
         }
         .form-floating label {
             padding: 0.8rem 1rem;
-            color: #5b7f9c;
+            color: rgba(255,255,255,0.5);
             font-weight: 500;
+        }
+        .form-floating input::placeholder {
+            color: rgba(255,255,255,0.4);
         }
         .btn-login {
             width: 100%;
             padding: 0.8rem;
             border-radius: 0.75rem;
             font-weight: 600;
-            background: linear-gradient(135deg, #1e6f9f, #155d85);
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
             border: none;
             color: white;
             font-size: 1rem;
-            transition: background 0.2s, transform 0.1s;
-            box-shadow: 0 4px 12px rgba(30, 111, 159, 0.3);
+            transition: all 0.25s;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
         }
         .btn-login:hover {
-            background: linear-gradient(135deg, #155d85, #0f4a6e);
             transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(37,99,235,0.4);
         }
         .btn-login:disabled {
-            background: #8ba3bc;
-            box-shadow: none;
+            opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
-        .alert { border-radius: 0.75rem; font-size: 0.9rem; padding: 0.8rem 1rem; border: none; }
-        .alert-danger { background: #fee2e2; color: #b91c1c; }
-        .alert-success { background: #e0f2e9; color: #1e6f3f; }
+        .alert {
+            border-radius: 0.75rem;
+            font-size: 0.9rem;
+            padding: 0.8rem 1rem;
+            border: none;
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
         .footer-text {
             text-align: center;
             margin-top: 1.5rem;
-            color: #8ba3bc;
+            color: rgba(255,255,255,0.4);
             font-size: 0.8rem;
         }
         .footer-text a {
-            color: #1e6f9f;
+            color: #93c5fd;
             text-decoration: none;
             font-weight: 500;
         }
-        .footer-text a:hover { text-decoration: underline; }
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
         .lockout-timer {
             text-align: center;
             margin-top: 1rem;
             font-weight: 600;
-            color: #c0392b;
+            color: #fca5a5;
             font-size: 0.95rem;
         }
         @media (max-width: 480px) {

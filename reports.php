@@ -64,6 +64,18 @@ $revenueData = [
         .export-btn {
             border-radius: 2rem;
         }
+        .badge-status {
+            padding: 0.35rem 0.85rem;
+            border-radius: 2rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+        }
+        .badge-status.paid { background: #D1FAE5; color: #065F46; }
+        .badge-status.unpaid { background: #FEE2E2; color: #991B1B; }
+        .badge-status.partial { background: #FEF3C7; color: #92400E; }
+        .badge-status.completed { background: #D1FAE5; color: #065F46; }
+        .badge-status.pending { background: #FEF3C7; color: #92400E; }
+        .badge-status.cancelled { background: #FEE2E2; color: #991B1B; }
     </style>
 </head>
 <body>
@@ -73,6 +85,7 @@ $revenueData = [
             <h4 class="fw-bold mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>Reports & Analytics</h4>
             <div class="d-flex gap-2">
                 <a href="export_csv.php?type=patients" class="btn btn-primary btn-sm"><i class="fas fa-file-csv me-1"></i>Export CSV</a>
+                <a href="export_transactions_csv.php" class="btn btn-primary btn-sm"><i class="fas fa-file-csv me-1"></i>Export Transactions CSV</a>
                 <a href="xml_export.php" class="btn btn-outline-primary btn-sm"><i class="fas fa-file-code me-1"></i>Export XML</a>
                 <a href="dashboard.php" class="btn btn-outline-primary btn-sm"><i class="fas fa-arrow-left me-1"></i>Back</a>
             </div>
