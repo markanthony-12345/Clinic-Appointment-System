@@ -51,7 +51,7 @@ $archivedPatients = $patientService->getArchived();
                                     <th>ID</th>
                                     <th>Name</th>
                                     <th>Age</th>
-                                    <th>Gender</th>
+                                    <th>Gender</th> <!-- Keep as Gender -->
                                     <th>Contact</th>
                                     <th>Archived Date</th>
                                     <th>Actions</th>
@@ -63,7 +63,7 @@ $archivedPatients = $patientService->getArchived();
                                         <td><?= $p['patient_id'] ?></td>
                                         <td><strong><?= htmlspecialchars($p['fullname']) ?></strong></td>
                                         <td><?= $p['age'] ?></td>
-                                        <td><?= htmlspecialchars($p['gender'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($p['gender'] ?? '') ?></td> <!-- FIXED: gender -->
                                         <td><?= htmlspecialchars($p['contact_number'] ?? '') ?></td>
                                         <td><?= date('M j, Y g:i A', strtotime($p['date_registered'])) ?></td>
                                         <td>

@@ -26,15 +26,14 @@ $appointments = $record['appointments'];
 $medicines = $record['medicines'];
 $lab_records = $record['lab_records'];
 
-// Fetch appointment history (all appointments for this patient)
 $appointmentHistory = $patientService->getAppointmentHistory($pid);
-
-// Fetch billing/transaction history
 $transactionService = new TransactionService();
 $billingHistory = $transactionService->getPatientTransactions($pid);
-
-// Current tab (default: info)
 $tab = $_GET['tab'] ?? 'info';
+
+// Handle success/error messages from email sending
+$success = $_GET['success'] ?? '';
+$error = $_GET['error'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,41 +63,42 @@ $tab = $_GET['tab'] ?? 'info';
     <?php include 'sidebar.php'; ?>
     <div class="main-content">
         <div class="container py-4">
-            <!-- Header with History Link -->
+            <!-- Header -->
             <header class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom">
                 <h1 class="h3"><i class="fas fa-user-md me-2"></i> <?= htmlspecialchars($pdata['fullname']) ?></h1>
                 <div>
-                    <a href="patient_history.php?patient_id=<?= $pid ?>" class="btn btn-outline-primary me-2"><i class="fas fa-history me-1"></i>Full History</a>
+                    <!-- NEW Send Email Button -->
+                    <button class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#sendEmailModal">
+                        <i class="fas fa-envelope me-1"></i>Send Email
+                    </button>
+                    <a href="patient_history.php?patient_id=<?= $pid ?>" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-history me-1"></i>Full History
+                    </a>
                     <a href="dashboard.php" class="btn btn-outline-primary">← Back</a>
                 </div>
             </header>
 
+            <!-- Success/Error Messages -->
+            <?php if ($success): ?>
+                <div class="alert alert-success">✅ <?= htmlspecialchars($success) ?></div>
+            <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-danger">❌ <?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
+
             <!-- Tabs -->
             <ul class="nav nav-tabs mb-4" id="patientTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $tab == 'info' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=info" role="tab">Patient Info</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $tab == 'appointments' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=appointments" role="tab">Appointments</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $tab == 'billing' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=billing" role="tab">Billing & Transactions</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $tab == 'laboratory' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=laboratory" role="tab">Laboratory</a>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <a class="nav-link <?= $tab == 'medicines' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=medicines" role="tab">Medicines</a>
-                </li>
+                <li class="nav-item"><a class="nav-link <?= $tab == 'info' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=info" role="tab">Patient Info</a></li>
+                <li class="nav-item"><a class="nav-link <?= $tab == 'appointments' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=appointments">Appointments</a></li>
+                <li class="nav-item"><a class="nav-link <?= $tab == 'billing' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=billing">Billing & Transactions</a></li>
+                <li class="nav-item"><a class="nav-link <?= $tab == 'laboratory' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=laboratory">Laboratory</a></li>
+                <li class="nav-item"><a class="nav-link <?= $tab == 'medicines' ? 'active' : '' ?>" href="?patient_id=<?= $pid ?>&tab=medicines">Medicines</a></li>
             </ul>
 
-            <!-- Tab Content -->
+            <!-- Tab Content (unchanged) -->
             <div class="tab-content">
-
-                <!-- Patient Info Tab -->
                 <div class="tab-pane fade <?= $tab == 'info' ? 'show active' : '' ?>" id="info">
                     <div class="row g-4">
-                        <!-- Basic Info -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header"><i class="fas fa-info-circle me-2"></i>Patient Details</div>
@@ -114,7 +114,6 @@ $tab = $_GET['tab'] ?? 'info';
                                 </div>
                             </div>
                         </div>
-                        <!-- Payment & Clearance -->
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header"><i class="fas fa-money-bill-wave me-2"></i>Payment & Clearance</div>
@@ -127,7 +126,6 @@ $tab = $_GET['tab'] ?? 'info';
                                     <p><strong>Total Bill:</strong> ₱<?= number_format($total, 2) ?></p>
                                     <p><strong>Amount Paid:</strong> ₱<?= number_format($payment['amount_paid'], 2) ?></p>
                                     <p><strong>Balance:</strong> ₱<?= number_format($balance, 2) ?></p>
-
                                     <?php if (!$hasCharges): ?>
                                         <span class="badge bg-secondary">No Charges</span>
                                     <?php elseif ($balance <= 0): ?>
@@ -137,7 +135,6 @@ $tab = $_GET['tab'] ?? 'info';
                                             <i class="fas fa-plus"></i> Add Payment
                                         </button>
                                     <?php endif; ?>
-
                                     <hr>
                                     <h5>Clearance</h5>
                                     <div class="d-flex flex-wrap gap-3">
@@ -168,8 +165,7 @@ $tab = $_GET['tab'] ?? 'info';
                         </div>
                     </div>
                 </div>
-
-                <!-- Appointments Tab -->
+                <!-- Other tabs unchanged -->
                 <div class="tab-pane fade <?= $tab == 'appointments' ? 'show active' : '' ?>" id="appointments">
                     <div class="card">
                         <div class="card-header">
@@ -190,7 +186,6 @@ $tab = $_GET['tab'] ?? 'info';
                                 <button class="btn btn-sm btn-secondary" onclick="filterAppointments()">Filter</button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="resetApptFilters()">Reset</button>
                             </div>
-
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle" id="apptTable">
                                     <thead>
@@ -224,8 +219,6 @@ $tab = $_GET['tab'] ?? 'info';
                         </div>
                     </div>
                 </div>
-
-                <!-- Billing Tab -->
                 <div class="tab-pane fade <?= $tab == 'billing' ? 'show active' : '' ?>" id="billing">
                     <div class="card">
                         <div class="card-header">
@@ -252,7 +245,6 @@ $tab = $_GET['tab'] ?? 'info';
                                 <button class="btn btn-sm btn-secondary" onclick="filterBilling()">Filter</button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="resetBillingFilters()">Reset</button>
                             </div>
-
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle" id="billingTable">
                                     <thead>
@@ -272,7 +264,7 @@ $tab = $_GET['tab'] ?? 'info';
                                         <?php if (empty($billingHistory)): ?>
                                             <tr><td colspan="9" class="text-center text-muted py-4">No billing records found.</td></tr>
                                         <?php else: ?>
-                                            <?php foreach ($billingHistory as $b): 
+                                            <?php foreach ($billingHistory as $b):
                                                 $balance = $b['total_amount'] - $b['amount_paid'];
                                                 $badgeStatus = strtolower(str_replace(' ', '-', $b['payment_status']));
                                             ?>
@@ -298,8 +290,6 @@ $tab = $_GET['tab'] ?? 'info';
                         </div>
                     </div>
                 </div>
-
-                <!-- Laboratory Tab -->
                 <div class="tab-pane fade <?= $tab == 'laboratory' ? 'show active' : '' ?>" id="laboratory">
                     <div class="card">
                         <div class="card-header"><i class="fas fa-microscope me-2"></i>Laboratory Records</div>
@@ -323,8 +313,6 @@ $tab = $_GET['tab'] ?? 'info';
                         </div>
                     </div>
                 </div>
-
-                <!-- Medicines Tab -->
                 <div class="tab-pane fade <?= $tab == 'medicines' ? 'show active' : '' ?>" id="medicines">
                     <div class="card">
                         <div class="card-header"><i class="fas fa-pills me-2"></i>Medicine Records</div>
@@ -349,10 +337,9 @@ $tab = $_GET['tab'] ?? 'info';
                         </div>
                     </div>
                 </div>
-
-            </div> <!-- tab-content -->
-        </div> <!-- container -->
-    </div> <!-- main-content -->
+            </div><!-- tab-content -->
+        </div><!-- container -->
+    </div><!-- main-content -->
 
     <!-- Payment Modal -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
@@ -367,6 +354,33 @@ $tab = $_GET['tab'] ?? 'info';
                         <p>Balance: ₱<span id="modal_balance"></span></p>
                         <div class="mb-3"><label>Payment Amount</label><input type="number" name="payment_amount" id="payment_amount" step="0.01" min="0.01" class="form-control" required></div>
                         <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Email Modal -->
+    <div class="modal fade" id="sendEmailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-envelope me-2 text-primary"></i>Send Email to <?= htmlspecialchars($pdata['fullname']) ?></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="send_patient_email.php" method="POST">
+                        <input type="hidden" name="patient_id" value="<?= $pid ?>">
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" name="subject" class="form-control" required placeholder="e.g., Important update">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Message</label>
+                            <textarea name="message" class="form-control" rows="6" required placeholder="Write your message here..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane me-1"></i>Send Email</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     </form>
                 </div>
             </div>
@@ -389,7 +403,7 @@ $tab = $_GET['tab'] ?? 'info';
                 .then(data => { if (data.success) location.reload(); else alert('Reset failed'); });
         }
 
-        // Filter appointments
+        // Filters (unchanged)
         function filterAppointments() {
             const search = document.getElementById('appt-search').value.toLowerCase();
             const status = document.getElementById('appt-status-filter').value;
@@ -429,7 +443,6 @@ $tab = $_GET['tab'] ?? 'info';
         document.getElementById('appt-status-filter').addEventListener('change', filterAppointments);
         document.getElementById('appt-date-filter').addEventListener('change', filterAppointments);
 
-        // Filter billing
         function filterBilling() {
             const search = document.getElementById('billing-search').value.toLowerCase();
             const status = document.getElementById('billing-status-filter').value;
@@ -462,4 +475,4 @@ $tab = $_GET['tab'] ?? 'info';
         document.getElementById('billing-method-filter').addEventListener('change', filterBilling);
     </script>
 </body>
-</html> 
+</html>

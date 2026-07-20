@@ -8,7 +8,7 @@ $patientService = new PatientService();
 
 $stats = $reportService->getDashboardStats();
 $recentPatients = $patientService->getAll(10);
-$doctors = $pdo->query("SELECT * FROM doctors")->fetchAll();
+$doctors = $pdo->query("SELECT * FROM doctors WHERE is_active = 1")->fetchAll();
 
 $recentMedicines = $pdo->query("
     SELECT m.*, p.fullname 
@@ -141,7 +141,8 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
             <small class="text-muted">Here's what's happening with your clinic today.</small>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="#patient-form" class="btn btn-primary btn-sm" data-bs-toggle="modal"><i class="fas fa-user-plus me-1"></i> Register Patient</a>
+            <!-- CHANGED: Now links to full registration page instead of modal -->
+            <a href="patient_register.php" class="btn btn-primary btn-sm"><i class="fas fa-user-plus me-1"></i> Register Patient</a>
             <a href="#appointment-form" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"><i class="fas fa-calendar-plus me-1"></i> New Appointment</a>
         </div>
     </div>
@@ -318,77 +319,9 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
 
     <!-- ===== MODALS ===== -->
 
-    <!-- Register Patient Modal -->
-    <div class="modal fade" id="patient-form" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Register Patient</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form action="patient_register.php" method="POST">
-                        <div class="mb-3">
-                            <label class="form-label">Full Name *</label>
-                            <input type="text" name="fullname" class="form-control" required pattern="[A-Za-z\s\-]+">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Age *</label>
-                                <input type="number" name="age" class="form-control" required min="0" max="150">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Gender *</label>
-                                <select name="gender" class="form-select" required>
-                                    <option value="">Select...</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <option>Other</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Address *</label>
-                            <textarea name="address" class="form-control" required></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Contact Number *</label>
-                            <input type="tel" name="contact_number" class="form-control" required pattern="[0-9]{11}" placeholder="09123456789">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Civil Status</label>
-                            <select name="civil_status" class="form-select">
-                                <option value="">Select...</option>
-                                <option>Single</option>
-                                <option>Married</option>
-                                <option>Divorced</option>
-                                <option>Widowed</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Citizenship</label>
-                            <input type="text" name="citizenship" class="form-control" placeholder="Filipino">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Place of Birth</label>
-                            <input type="text" name="place_of_birth" class="form-control" placeholder="City, Province">
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
-                            <label class="form-check-label" for="terms">I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>.</label>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-1"></i>Register Patient</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- REMOVED: patient-form modal (quick registration) -->
 
-    <!-- ====== APPOINTMENT MODAL (Updated) ====== -->
+    <!-- ====== APPOINTMENT MODAL ====== -->
     <div class="modal fade" id="appointment-form" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -447,7 +380,7 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
                             </select>
                         </div>
 
-                        <!-- ===== SUGGESTED LABORATORY TESTS ONLY ===== -->
+                        <!-- ===== SUGGESTED LABORATORY TESTS ===== -->
                         <div id="lab-suggestions-panel" style="display: none; border: 1px solid #dee2e6; border-radius: 0.75rem; padding: 1rem; background: #f8f9fa; margin-bottom: 1rem;">
                             <h6 class="fw-bold"><i class="fas fa-flask me-2 text-primary"></i>Suggested Laboratory Tests</h6>
                             <div id="lab-suggestion-list" class="row g-2">
@@ -460,7 +393,6 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
                             </div>
                         </div>
 
-                        <!-- Hidden fields (medications removed) -->
                         <input type="hidden" name="lab_tests" id="selected_lab_tests" value="">
                         <input type="hidden" name="lab_fee_total" id="lab_fee_total" value="0">
 
@@ -711,11 +643,7 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
             currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(currentDate);
         });
 
-        // ============================================================
-        // ===== APPOINTMENT JAVASCRIPT (UPDATED) =====
-        // ============================================================
-
-        // ---- Patient Info ----
+        // ===== APPOINTMENT JAVASCRIPT =====
         const patientInput = document.getElementById('patient_id_input');
         const patientInfoBox = document.getElementById('patient-info-box');
         const pName = document.getElementById('p_name');
@@ -757,7 +685,7 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
             fetchPatientInfo(pid);
         });
 
-        // ---- Availability & Time Slots (FIXED) ----
+        // Availability & Time Slots
         const doctorSelect = document.getElementById('doctor_select');
         const dateInput = document.getElementById('appt_date');
         const timeSelect = document.getElementById('appt_time');
@@ -787,17 +715,14 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
             timeSelect.innerHTML = '<option value="">Loading...</option>';
             timeSelect.disabled = true;
 
-            // 1. Check availability
             fetch(`api.php?action=availability&doctor_id=${doctorId}&date=${date}`)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
                     return res.json();
                 })
                 .then(data => {
-                    console.log('Availability response:', data);
                     if (data.available) {
                         msgDiv.innerHTML = `<span class="text-success">✅ ${data.remaining} slot(s) available</span>`;
-                        // 2. Fetch time slots
                         return fetch(`api.php?action=time_slots&doctor_id=${doctorId}&date=${date}`);
                     } else {
                         msgDiv.innerHTML = `<span class="text-danger">❌ ${data.reason || 'No slots available'}</span>`;
@@ -811,7 +736,6 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
                     return res.json();
                 })
                 .then(slots => {
-                    console.log('Time slots response:', slots);
                     if (!slots || !slots.length) {
                         timeSelect.innerHTML = '<option value="">No available times</option>';
                         timeSelect.disabled = true;
@@ -837,7 +761,6 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
         doctorSelect?.addEventListener('change', checkAvailability);
         dateInput?.addEventListener('change', checkAvailability);
 
-        // Enable/disable book button
         function checkBookButton() {
             const patientId = document.getElementById('patient_id_input').value;
             const doctor = doctorSelect.value;
@@ -850,7 +773,7 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
         dateInput?.addEventListener('change', checkBookButton);
         timeSelect?.addEventListener('change', checkBookButton);
 
-        // ---- Lab Suggestions (Only) ----
+        // Lab suggestions
         const labSuggestionsPanel = document.getElementById('lab-suggestions-panel');
         const labList = document.getElementById('lab-suggestion-list');
         const labNote = document.getElementById('lab-note');
@@ -912,7 +835,7 @@ $paymentData = $paymentStatus ?: ['paid' => 0, 'partial' => 0, 'unpaid' => 0];
             document.getElementById('selected_lab_tests').value = labValues.join(', ');
         });
 
-        // ===== NOTIFICATIONS =====
+        // Notifications
         const notifItems = document.querySelectorAll('.notif-item');
         const unreadBadge = document.getElementById('unreadBadge');
         const unreadCountLabel = document.getElementById('unreadCountLabel');

@@ -13,6 +13,7 @@
             </a>
         </li>
         <li class="nav-item">
+            <!-- FIXED: Points to patient_list.php -->
             <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'patient_list.php' ? 'active' : '' ?>" href="patient_list.php">
                 <i class="fas fa-users"></i> Patients
             </a>
@@ -47,12 +48,18 @@
                 <i class="fas fa-chart-line"></i> Reports
             </a>
         </li>
+        <li class="nav-item">
+           <a class="nav-link <?= basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : '' ?>" href="settings.php">
+                  <i class="fas fa-cog"></i> Settings
+           </a>
+</li>
         <li class="nav-item" style="flex:1;"></li>
         <li class="nav-item">
             <a class="nav-link text-danger" href="logout.php">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </li>
+        
     </ul>
     <div class="sidebar-footer">
         <small>© <?= date('Y') ?> ClinicPro v2.0</small>

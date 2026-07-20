@@ -2,13 +2,10 @@
 require_once 'config.php';
 requireLogin();
 
-// Helper validation functions (unchanged)
-function validateFullname($name) {
-    if (!preg_match('/^[A-Za-z\s\-]+$/', $name)) {
-        return "Full name must contain only letters, spaces, and hyphens.";
-    }
-    if (str_word_count($name) < 2) {
-        return "Please enter your full name (first and last name).";
+function validateNamePart($part, $fieldName) {
+    if (empty($part)) return "$fieldName is required.";
+    if (!preg_match('/^[A-Za-z\s\-]+$/', $part)) {
+        return "$fieldName must contain only letters, spaces, and hyphens.";
     }
     return true;
 }
@@ -22,8 +19,13 @@ function validateAge($age) {
 
 function validateContact($contact) {
     $digits = preg_replace('/\D/', '', $contact);
-    if (strlen($digits) !== 11) {
-        return "Contact number must be exactly 11 digits (e.g., 09123456789).";
+    // Exactly 10 digits (no leading zero)
+    if (strlen($digits) !== 10) {
+        return "Contact number must be exactly 10 digits (e.g., 9123456789).";
+    }
+    // Optional: check that it starts with 9 (common for PH mobile)
+    if ($digits[0] !== '9') {
+        return "Contact number must start with 9.";
     }
     return true;
 }
@@ -36,7 +38,10 @@ function validateEmail($email) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $fullname = trim($_POST['fullname'] ?? '');
+    $first_name = trim($_POST['first_name'] ?? '');
+    $middle_name = trim($_POST['middle_name'] ?? '');
+    $last_name = trim($_POST['last_name'] ?? '');
+    $suffix = trim($_POST['suffix'] ?? '');
     $age = trim($_POST['age'] ?? '');
     $gender = sanitize($_POST['gender'] ?? '');
     $address = sanitize($_POST['address'] ?? '');
@@ -48,8 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $terms = isset($_POST['terms']) ? true : false;
 
     $errors = [];
-    $fullnameCheck = validateFullname($fullname);
-    if ($fullnameCheck !== true) $errors[] = $fullnameCheck;
+    $fnCheck = validateNamePart($first_name, 'First Name');
+    if ($fnCheck !== true) $errors[] = $fnCheck;
+    $lnCheck = validateNamePart($last_name, 'Last Name');
+    if ($lnCheck !== true) $errors[] = $lnCheck;
+    if ($middle_name && !preg_match('/^[A-Za-z\s\-]+$/', $middle_name)) {
+        $errors[] = "Middle Name must contain only letters, spaces, and hyphens.";
+    }
+    if ($suffix && !preg_match('/^[A-Za-z\.\s]+$/', $suffix)) {
+        $errors[] = "Suffix must contain only letters, dots, and spaces.";
+    }
     $ageCheck = validateAge($age);
     if ($ageCheck !== true) $errors[] = $ageCheck;
     $contactCheck = validateContact($contact);
@@ -61,22 +74,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($address)) $errors[] = "Address is required.";
 
     if (empty($errors)) {
-        $contact_clean = preg_replace('/\D/', '', $contact);
+        $contact_clean = preg_replace('/\D/', '', $contact); // 10 digits
+        // Build full name
+        $fullname = $first_name;
+        if ($middle_name) $fullname .= ' ' . $middle_name;
+        $fullname .= ' ' . $last_name;
+        if ($suffix) $fullname .= ' ' . $suffix;
+
         try {
             $pdo->beginTransaction();
 
-            // Insert patient
             $stmt = $pdo->prepare("
-                INSERT INTO patients (fullname, age, gender, address, contact_number, email, civil_status, citizenship, place_of_birth) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO patients (fullname, first_name, middle_name, last_name, suffix, age, gender, address, contact_number, email, civil_status, citizenship, place_of_birth) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
-                $fullname, $age, $gender, $address, $contact_clean,
+                $fullname, $first_name, $middle_name, $last_name, $suffix,
+                $age, $gender, $address, $contact_clean,
                 $email, $civil_status, $citizenship, $place_of_birth
             ]);
             $patient_id = $pdo->lastInsertId();
 
-            // ✅ Insert payment record with zero fees (no initial charge)
+            // Insert payment record with zero fees
             $stmt2 = $pdo->prepare("
                 INSERT INTO payments (patient_id, consultation_fee, laboratory_fee, amount_paid, total_amount) 
                 VALUES (?, 0, 0, 0, 0)
@@ -129,17 +148,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="alert alert-danger"><?= $error_msg ?></div>
                             <?php endif; ?>
                             <form method="POST" id="registerForm">
-                                <div class="mb-3">
-                                    <label class="form-label">Full Name *</label>
-                                    <input type="text" name="fullname" class="form-control" required pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed.">
-                                    <div class="form-text">At least first and last name, letters only.</div>
-                                </div>
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">First Name *</label>
+                                        <input type="text" name="first_name" class="form-control" required pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed.">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Middle Name</label>
+                                        <input type="text" name="middle_name" class="form-control" pattern="[A-Za-z\s\-]*" title="Only letters, spaces, and hyphens allowed.">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Last Name *</label>
+                                        <input type="text" name="last_name" class="form-control" required pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed.">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Suffix</label>
+                                        <input type="text" name="suffix" class="form-control" pattern="[A-Za-z\.\s]*" placeholder="Jr., Sr., II, III, etc.">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Age *</label>
                                         <input type="number" name="age" class="form-control" required min="0" max="150">
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Gender *</label>
                                         <select name="gender" class="form-select" required>
                                             <option value="">Select...</option>
@@ -157,9 +187,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <label class="form-label">Contact Number *</label>
                                     <div class="input-group">
                                         <span class="input-group-text">+63</span>
-                                        <input type="tel" name="contact_number" class="form-control" required pattern="[0-9]{11}" title="Exactly 11 digits (e.g., 09123456789)" placeholder="09123456789">
+                                        <input type="tel" name="contact_number" class="form-control" required pattern="[0-9]{10}" title="Exactly 10 digits (e.g., 9123456789)" placeholder="9123456789">
                                     </div>
-                                    <div class="form-text">Exactly 11 digits (no +63).</div>
+                                    <div class="form-text">Exactly 10 digits (no leading zero, starts with 9).</div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Email</label>
@@ -214,8 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             const contact = document.querySelector('input[name="contact_number"]');
             const digits = contact.value.replace(/\D/g, '');
-            if (digits.length !== 11) {
-                alert('Contact number must be exactly 11 digits.');
+            if (digits.length !== 10 || digits[0] !== '9') {
+                alert('Contact number must be exactly 10 digits starting with 9 (e.g., 9123456789).');
                 e.preventDefault();
                 return false;
             }
@@ -223,4 +253,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     </script>
 </body>
-</html> 
+</html>

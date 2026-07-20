@@ -47,19 +47,34 @@ if (!$patient) {
                     <div class="card shadow-sm">
                         <div class="card-body">
                             <h5 class="card-title">Patient ID: #<?= $patient['patient_id'] ?></h5>
-                            <form action="update_patient.php" method="POST">
+                            <?php if (isset($_GET['error'])): ?>
+                                <div class="alert alert-danger"><?= htmlspecialchars($_GET['error']) ?></div>
+                            <?php endif; ?>
+                            <form action="update_patient.php" method="POST" id="editForm">
                                 <input type="hidden" name="patient_id" value="<?= $patient['patient_id'] ?>">
 
-                                <div class="mb-3">
-                                    <label class="form-label">Full Name *</label>
-                                    <input type="text" name="fullname" class="form-control" required pattern="[A-Za-z\s\-]+" value="<?= htmlspecialchars($patient['fullname']) ?>">
-                                </div>
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">First Name *</label>
+                                        <input type="text" name="first_name" class="form-control" required pattern="[A-Za-z\s\-]+" value="<?= htmlspecialchars($patient['first_name'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Middle Name</label>
+                                        <input type="text" name="middle_name" class="form-control" pattern="[A-Za-z\s\-]*" value="<?= htmlspecialchars($patient['middle_name'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Last Name *</label>
+                                        <input type="text" name="last_name" class="form-control" required pattern="[A-Za-z\s\-]+" value="<?= htmlspecialchars($patient['last_name'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Suffix</label>
+                                        <input type="text" name="suffix" class="form-control" pattern="[A-Za-z\.\s]*" value="<?= htmlspecialchars($patient['suffix'] ?? '') ?>" placeholder="Jr., Sr., II, III, etc.">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Age *</label>
                                         <input type="number" name="age" class="form-control" required min="0" max="150" value="<?= $patient['age'] ?>">
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Gender *</label>
                                         <select name="gender" class="form-select" required>
                                             <option value="Male" <?= ($patient['gender'] ?? '') == 'Male' ? 'selected' : '' ?>>Male</option>
@@ -76,8 +91,9 @@ if (!$patient) {
                                     <label class="form-label">Contact Number *</label>
                                     <div class="input-group">
                                         <span class="input-group-text">+63</span>
-                                        <input type="tel" name="contact_number" class="form-control" required pattern="[0-9]{11}" value="<?= htmlspecialchars($patient['contact_number']) ?>">
+                                        <input type="tel" name="contact_number" class="form-control" required pattern="[0-9]{10}" title="Exactly 10 digits (e.g., 9123456789)" value="<?= htmlspecialchars($patient['contact_number']) ?>">
                                     </div>
+                                    <div class="form-text">Exactly 10 digits (no leading zero, starts with 9).</div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">Email</label>

@@ -151,4 +151,6 @@ ALTER TABLE `medicines`
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
+ 
+
 COMMIT;

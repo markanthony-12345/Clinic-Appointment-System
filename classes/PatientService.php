@@ -14,9 +14,10 @@ class PatientService {
         return $stmt->fetch();
     }
 
+    // FIXED: Cast limit to int and use direct query to avoid binding issue
     public function getAll($limit = 10) {
-        $stmt = $this->pdo->prepare("SELECT * FROM patients ORDER BY patient_id DESC LIMIT ?");
-        $stmt->execute([$limit]);
+        $limit = (int)$limit;
+        $stmt = $this->pdo->query("SELECT * FROM patients ORDER BY patient_id DESC LIMIT $limit");
         return $stmt->fetchAll();
     }
 
@@ -55,7 +56,6 @@ class PatientService {
         $labService = new LabService();
         $medService = new MedicineService();
 
-        // ✅ Fixed: use getByPatient() instead of getAppointmentsByPatient()
         $appointments = $apptService->getByPatient($patient_id);
         $lab_records = $labService->getByPatient($patient_id);
         $medicines = $medService->getByPatient($patient_id);
@@ -109,9 +109,6 @@ class PatientService {
         return $pay;
     }
     
-    /**
-     * Get appointment history for a patient
-     */
     public function getAppointmentHistory($patient_id) {
         $stmt = $this->pdo->prepare("
             SELECT a.*, d.doctor_name, d.specialization
