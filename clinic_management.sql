@@ -151,6 +151,179 @@ ALTER TABLE `medicines`
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
- 
+ -- ============================================
+-- COMPLETE DATABASE MIGRATION
+-- Clinic Management System
+-- (No Google Calendar)
+-- Run this script once to update your database
+-- ============================================
+
+-- ============================================
+-- 1. PATIENTS TABLE
+-- ============================================
+
+-- Add archive and extended fields
+ALTER TABLE patients 
+ADD COLUMN IF NOT EXISTS is_archived TINYINT(1) DEFAULT 0,
+ADD COLUMN IF NOT EXISTS email VARCHAR(100) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS civil_status VARCHAR(30) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS citizenship VARCHAR(50) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS place_of_birth VARCHAR(100) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS first_name VARCHAR(50) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS middle_name VARCHAR(50) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS last_name VARCHAR(50) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS suffix VARCHAR(20) DEFAULT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_patients_archived ON patients(is_archived);
+
+ALTER TABLE appointments
+ADD COLUMN IF NOT EXISTS cancellation_reason TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS lab_tests TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS lab_fee_total DECIMAL(10,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS med_tests TEXT DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS med_fee_total DECIMAL(10,2) DEFAULT 0.00;
+
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);
+
+ALTER TABLE doctors
+ADD COLUMN IF NOT EXISTS is_active TINYINT(1) DEFAULT 1;
+
+ALTER TABLE medicines
+ADD COLUMN IF NOT EXISTS quantity INT(11) DEFAULT 1,
+ADD COLUMN IF NOT EXISTS unit VARCHAR(20) DEFAULT 'pcs',
+ADD COLUMN IF NOT EXISTS expiry_date DATE DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS reorder_level INT(11) DEFAULT 5,
+ADD COLUMN IF NOT EXISTS supplier VARCHAR(100) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0.00,
+ADD COLUMN IF NOT EXISTS batch_number VARCHAR(50) DEFAULT NULL;
+
+ALTER TABLE laboratory
+ADD COLUMN IF NOT EXISTS doctor_id INT(11) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS appointment_id INT(11) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS appointment_date DATE DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS appointment_time TIME DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS procedure_name VARCHAR(100) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS procedure_fee DECIMAL(10,2) DEFAULT 0.00;
+
+-- Add foreign key for appointment_id (if not already exists)
+SET @fk_exists = (SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE 
+                  WHERE TABLE_SCHEMA = DATABASE() 
+                  AND TABLE_NAME = 'laboratory' 
+                  AND CONSTRAINT_NAME LIKE 'laboratory_ibfk_%' 
+                  AND COLUMN_NAME = 'appointment_id');
+IF @fk_exists = 0 THEN
+    ALTER TABLE laboratory ADD CONSTRAINT fk_lab_appointment FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id) ON DELETE SET NULL;
+END IF;
+
+-- Indexes for patient and appointment lookups
+CREATE INDEX IF NOT EXISTS idx_lab_patient ON laboratory(patient_id);
+CREATE INDEX IF NOT EXISTS idx_lab_appointment ON laboratory(appointment_id);
+
+
+-- ============================================
+-- 6. USERS TABLE (Patient Portal)
+-- ============================================
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS patient_id INT(11) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS is_active TINYINT(1) DEFAULT 1,
+ADD COLUMN IF NOT EXISTS security_question VARCHAR(255) DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS security_answer VARCHAR(255) DEFAULT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_patient ON users(patient_id);
+
+
+CREATE TABLE IF NOT EXISTS settings (
+    id INT(11) PRIMARY KEY AUTO_INCREMENT,
+    setting_key VARCHAR(100) UNIQUE NOT NULL,
+    setting_value TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Insert default email settings
+INSERT INTO settings (setting_key, setting_value) VALUES 
+('email_username', 'your-email@gmail.com'),
+('email_password', 'your-app-password'),
+('email_from_name', 'Clinic Management System'),
+('email_host', 'smtp.gmail.com'),
+('email_port', '465'),
+('email_encryption', 'ssl')
+ON DUPLICATE KEY UPDATE setting_key = setting_key;
+
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT(11) PRIMARY KEY AUTO_INCREMENT,
+    transaction_number VARCHAR(50) UNIQUE NOT NULL,
+    patient_id INT(11) NOT NULL,
+    doctor_id INT(11) DEFAULT NULL,
+    appointment_id INT(11) DEFAULT NULL,
+    user_id INT(11) NOT NULL,
+    consultation_fee DECIMAL(10,2) DEFAULT 0.00,
+    lab_fee DECIMAL(10,2) DEFAULT 0.00,
+    medicine_fee DECIMAL(10,2) DEFAULT 0.00,
+    other_charges DECIMAL(10,2) DEFAULT 0.00,
+    discount DECIMAL(10,2) DEFAULT 0.00,
+    total_amount DECIMAL(10,2) NOT NULL,
+    amount_paid DECIMAL(10,2) DEFAULT 0.00,
+    change_amount DECIMAL(10,2) DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'Cash',
+    payment_status ENUM('Unpaid', 'Partially Paid', 'Paid', 'Refunded') DEFAULT 'Unpaid',
+    reference_number VARCHAR(100) DEFAULT NULL,
+    notes TEXT DEFAULT NULL,
+    is_refunded TINYINT(1) DEFAULT 0,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (patient_id) REFERENCES patients(patient_id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id) ON DELETE SET NULL,
+    FOREIGN KEY (appointment_id) REFERENCES appointments(appointment_id) ON DELETE SET NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IF NOT EXISTS idx_transactions_patient ON transactions(patient_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(payment_status);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT(11) PRIMARY KEY AUTO_INCREMENT,
+    user_id INT(11) NOT NULL,
+    type ENUM('appointment', 'lab', 'medicine', 'payment', 'system') DEFAULT 'system',
+    message TEXT NOT NULL,
+    url VARCHAR(255) DEFAULT NULL,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read);
+
+CREATE TABLE IF NOT EXISTS inventory_logs (
+    log_id INT(11) PRIMARY KEY AUTO_INCREMENT,
+    medicine_id INT(11) NOT NULL,
+    action ENUM('add', 'subtract', 'adjust', 'expired') NOT NULL,
+    quantity_change INT(11) NOT NULL,
+    previous_quantity INT(11) NOT NULL,
+    new_quantity INT(11) NOT NULL,
+    reason TEXT DEFAULT NULL,
+    created_by INT(11) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (medicine_id) REFERENCES medicines(medicine_id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX IF NOT EXISTS idx_inventory_medicine ON inventory_logs(medicine_id);
+
+UPDATE patients SET contact_number = SUBSTRING(contact_number, 2) WHERE contact_number LIKE '0%' AND LENGTH(contact_number) = 11;
+
+UPDATE patients 
+SET 
+    first_name = SUBSTRING_INDEX(fullname, ' ', 1),
+    last_name = SUBSTRING_INDEX(fullname, ' ', -1),
+    middle_name = CASE 
+        WHEN LENGTH(fullname) - LENGTH(REPLACE(fullname, ' ', '')) >= 2 
+        THEN SUBSTRING_INDEX(SUBSTRING_INDEX(fullname, ' ', 2), ' ', -1)
+        ELSE NULL 
+    END
+WHERE first_name IS NULL OR first_name = '';
 
 COMMIT;
